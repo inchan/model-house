@@ -13,8 +13,10 @@ export let frameMat: THREE.MeshStandardMaterial;
 
 export function initMaterials(renderer: THREE.WebGLRenderer, env: THREE.Texture){
   envTex = env; maxAniso = renderer.capabilities.getMaxAnisotropy();
+  // 벽 윗면(단면의 짙은 색)은 벽 상자 윗면 바로 위에 겹쳐 있다 — 전환 중 벽이 눌려 두 면이 거의 붙어도 늘 앞에 그려지게
+  capMat = new THREE.MeshStandardMaterial({color:'#34312d', roughness:.9, polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-2});
   glassMat = new THREE.MeshPhysicalMaterial({color:0xcfe6ef, roughness:.05, transparent:true, opacity:.28, depthWrite:false, side:THREE.DoubleSide});
-  wallMat = mat('#f4f1eb', {roughness:.92}); capMat = mat('#34312d', {roughness:.9}); frameMat = mat('#5d6166', {roughness:.5, metalness:.4});
+  wallMat = mat('#f4f1eb', {roughness:.92}); frameMat = mat('#5d6166', {roughness:.5, metalness:.4});
 }
 
 export function setWallColor(hex: string){ if (wallMat) wallMat.color.set(hex); }

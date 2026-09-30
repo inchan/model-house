@@ -52,12 +52,17 @@ with sync_playwright() as p:
         pg.mouse.up(); pg.wait_for_timeout(1500)
     fr, n = rate(orbit_drag)
     check('orbit drag renders at most once per frame', 0 < n <= fr + 2, f'{n} renders / {fr} frames')
+    # 깊이 정밀도: 위에서 볼 때는 근평면을 멀리 둬야 전환 중 눌린 벽·가구가 바닥과 번갈아 보이며 떨리지 않는다
+    near = pg.evaluate('window.__wmh3d.stats().near')
+    check('overview camera near plane pushed out (no z-fighting)', near > 1, near)
 
     # 방 시점
     for rid, name in [('living', '거실'), ('kitchen', '주방'), ('master', '안방'), ('bath1', '공용욕실')]:
         pg.locator(f'#roomTabs button[data-room="{rid}"]').click(); pg.wait_for_timeout(1500)
         pg.screenshot(path=str(OUT / f'03-room-{rid}.png'))
     check('room view mode active', pg.evaluate("document.querySelector('#stage').classList.contains('roomview')"))
+    near = pg.evaluate('window.__wmh3d.stats().near')
+    check('room view keeps near plane close', near <= .06, near)
     check('room tab highlighted', pg.locator('#roomTabs button.on').get_attribute('data-room') == 'bath1')
     pg.locator('#roomTabs button[data-room="__all"]').click(); pg.wait_for_timeout(1200)
     check('overview restored', not pg.evaluate("document.querySelector('#stage').classList.contains('roomview')"))

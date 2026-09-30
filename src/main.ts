@@ -74,5 +74,6 @@ if (!hadSavedState) openLanding(false, enterModelHouse);
 else requestAnimationFrame(() => setTimeout(enterModelHouse, 250));
 
 // 3D 엔진은 첫 화면이 뜬 뒤 여유 있을 때 미리 받아 둔다 (3D 전환 대기 시간 줄이기)
-const preload3D = () => { load3D().catch(() => { /* 실제로 3D로 전환할 때 다시 시도하고 알림을 띄운다 */ }); };
+// 받은 뒤에는 장면·셰이더까지 미리 준비해 첫 전환에서 멈추지 않게 한다
+const preload3D = () => { load3D().then(v => v.warm()).catch(() => { /* 실제로 3D로 전환할 때 다시 시도하고 알림을 띄운다 */ }); };
 if ('requestIdleCallback' in window) requestIdleCallback(preload3D, {timeout: 3000}); else setTimeout(preload3D, 1200);   // Safari에는 requestIdleCallback이 없다

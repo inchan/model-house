@@ -223,16 +223,19 @@ const topH = () => (opt.cut ? 1.2 : H);
 
 function buildArch(){
   clearGroup(archFloor); clearGroup(archUp); doors.length = 0; wallCol = []; edgeGeos = [];
-  const p = plan(), top = topH(), floors = new Batch();
+  const p = plan(), top = topH(), floors = new Batch(), ceils = new Batch();
   p.rooms.forEach(r => {
     const geo = new THREE.ShapeGeometry(shapeOf(r.poly)); geo.rotateX(-Math.PI/2);
     floors.add(floorMat(roomMat(r.id)), geo, 0, r.level ?? 0, 0);
     // 천장: 법선이 아래를 향해 실내에서 올려다볼 때만 보인다
-    if (top >= H){ const cg = new THREE.ShapeGeometry(shapeOf(r.poly, true)); cg.rotateX(Math.PI/2); archBatch.add(ceilMat, cg, 0, H, 0); }
+    if (top >= H){ const cg = new THREE.ShapeGeometry(shapeOf(r.poly, true)); cg.rotateX(Math.PI/2); ceils.add(ceilMat, cg, 0, H, 0); }
   });
   // 문턱
   [...p.doors, ...p.slides, ...p.gaps].forEach(d => { const [x0, y0, x1, y1] = d.rect; floors.add(sillMat, new THREE.BoxGeometry(M(x1-x0), .012, M(y1-y0)), wx((x0+x1)/2), .006, wz((y0+y1)/2)); });
   floors.flush(archFloor, false, {floor: true});
+  // 천장은 벽과 함께 솟지 않고 처음부터 제 높이에 둔다(위에서는 보이지 않는 면이라 전환 모습은 같다).
+  // 벽과 함께 눌렸다 펴지면 2cm쯤을 넘는 순간 집 전체에 햇빛 그림자를 드리워 화면이 한 번에 어두워졌다
+  ceils.flush(archFloor);
   p.walls.forEach(w => { wallBox(w.rect, 0, w.kind === 'low' ? Math.min(1, top) : top); wallCol.push(worldBox(w.rect)); });
   // 문·미닫이·개구부 위 인방
   [...p.doors, ...p.slides, ...p.gaps].forEach(d => { if (top > d.head) wallBox(d.rect, d.head, top); });
@@ -279,6 +282,7 @@ function buildWindow(w: WinG, top: number){
 }
 
 // 천장 조명: 원판은 항상, 점광원은 야경일 때만 둔다 (낮에는 광원 수를 줄여 셰이더를 가볍게)
+const lampSig = () => JSON.stringify([planId(plan()), opt.night, opt.cut]);
 const lampMat = new THREE.MeshStandardMaterial({color: '#fff', emissive: '#fff2d6', emissiveIntensity: .3});   // 원판은 모두 같은 재질
 function buildLamps(){
   clearGroup(lampG); lightG.clear();
@@ -290,7 +294,7 @@ function buildLamps(){
     lamp.position.set(wx(r.at[0]), H - .004, wz(r.at[1])); lamp.visible = topH() >= H; lampG.add(lamp);
     if (opt.night){ const pl = new THREE.PointLight(0xffd9a8, grow > .99 ? 6 : 0, 7, 1.6); pl.position.set(wx(r.at[0]), H - .25, wz(r.at[1])); lightG.add(pl); }
   });
-  sigLamps = JSON.stringify([state.type, state.opts, opt.night, opt.cut]);
+  sigLamps = lampSig();
 }
 
 /* ======================= 붙박이 설비 · 가구 ======================= */
@@ -356,20 +360,26 @@ function buildLabels(){
   });
 }
 
+// 평면 형상의 번호: 같은 타입·옵션이면 plan()이 같은 객체를 돌려주고, 내 평면을 고치거나 실행 취소하면 새 객체가 된다.
+// 타입·옵션 대신 이 번호로 비교해야 내 평면의 벽을 바꾼 것도 3D에 반영된다
+const planIds = new WeakMap<object, number>();
+let planSeq = 0;
+const planId = (p: object) => { let id = planIds.get(p); if (!id) planIds.set(p, id = ++planSeq); return id; };
+
 // 바뀐 부분만 다시 만든다
 function sync(force = false){
   if (!inited || (!active && !force)) return;
-  const p = plan(), org = `${(p.box[0]+p.box[2])/2},${(p.box[1]+p.box[3])/2}`;
+  const p = plan(), pid = planId(p), org = `${(p.box[0]+p.box[2])/2},${(p.box[1]+p.box[3])/2}`;
   if (org !== origin){ origin = org; setOrigin((p.box[0]+p.box[2])/2, (p.box[1]+p.box[3])/2); resetFurniture(); force = true; }
   let changed = false;
-  const a = JSON.stringify([state.type, state.opts, state.rooms, opt.cut]);
+  const a = JSON.stringify([pid, state.rooms, opt.cut]);
   if (force || a !== sigArch){ sigArch = a; buildArch(); changed = true; }
-  const fx = JSON.stringify([state.type, state.opts, state.style]);
+  const fx = JSON.stringify([pid, state.style]);
   if (force || fx !== sigFix){ sigFix = fx; buildFixtures(); changed = true; }
   syncFurniture();
-  const l = JSON.stringify([state.type, state.opts, state.rooms, opt.cut, lang]);
+  const l = JSON.stringify([pid, state.rooms, opt.cut, lang]);
   if (force || l !== sigLabels){ sigLabels = l; buildLabels(); }
-  if (JSON.stringify([state.type, state.opts, opt.night, opt.cut]) !== sigLamps){ buildLamps(); applyLight(); }
+  if (lampSig() !== sigLamps){ buildLamps(); applyLight(); }
   setWallColor(wallColor());
   if (changed) selKey = null;
   shadowDirty = true; invalidate();
@@ -477,10 +487,22 @@ function flyOverview(){
 }
 
 /* ======================= 3D 들어가기 / 나가기 ======================= */
+// 첫 화면·2D에 머무는 동안 3D를 미리 준비한다: WebGL·환경 반사맵 → 지금 평면의 장면 → 셰이더 컴파일(가능하면 병렬).
+// 처음 3D로 들어갈 때 클릭 직후 화면이 멈추던 시간(M2 Max 약 270ms, 느린 기기는 1초 넘게)을 줄인다
+const idle = () => new Promise<void>(r => { if ('requestIdleCallback' in window) requestIdleCallback(() => r(), {timeout: 1500}); else setTimeout(r, 120); });
+async function warm(){
+  if (inited) return;
+  await idle(); if (inited) return;
+  try { init(); } catch { return; }                  // WebGL을 못 쓰면 실제로 전환할 때 알린다
+  await idle(); if (active) return;
+  sync(true);
+  await idle(); if (active) return;
+  await renderer.compileAsync(scene, camera);
+}
 async function enter(){
   init(); active = true;
   renderer.setSize(SW(), SH()); labelRenderer.setSize(SW(), SH()); camera.aspect = SW()/SH(); camera.updateProjectionMatrix();
-  sync(true); setFov(FOV);
+  sync(); setFov(FOV);   // 2D에 있는 동안 바뀐 것만 다시 만든다 (서명 비교)
   opt.mode = 'orbit'; roomView = null; setOverviewControls(); stage.classList.remove('roomview'); syncModeUI(); orbit.enabled = false; showLabels(false);
   const A = planPose(), B = isoFrom(A);
   grow = 0; furnGrow = 0; applyGrow(); setPose(A);
@@ -714,8 +736,15 @@ let lastCam = '';
 // 마지막으로 그린 뒤 카메라가 눈에 띄게 움직였는가 (0.05mm, 아주 작은 회전은 무시)
 const camPos = new THREE.Vector3(Infinity, 0, 0), camQuat = new THREE.Quaternion();
 function camMoved(){ return camPos.distanceToSquared(camera.position) > 2.5e-9 || 1 - Math.abs(camQuat.dot(camera.quaternion)) > 1e-10; }
+// 근평면: 물체는 모두 천장(H) 아래에 있으므로 카메라가 높이 있을수록 근평면을 멀리 둔다.
+// 0.05m로 고정하면 수십 m 위에서 볼 때 1mm 안팎의 깊이 차이를 가리지 못해, 전환 중 눌린 벽·가구가 바닥과 번갈아 보이며 떨렸다.
+// 화면 안의 점은 시선에서 55° 안쪽이라 시선 방향 깊이가 높이 차의 0.57배 이상 — 여유를 두고 0.5배
+function fitNear(){
+  const n = Math.max(.05, (camera.position.y - H - .1)*.5);
+  if (Math.abs(n - camera.near) > n*.02){ camera.near = n; camera.updateProjectionMatrix(); }
+}
 function renderNow(){
-  updateSel();
+  updateSel(); fitNear();
   const inside = grow > .99 && camera.position.y < H && topH() >= H;
   lampG.visible = ceilG.visible = inside;
   // 실내 시점에서는 모델하우스처럼 밝게 (광원 수는 그대로, 세기만)
@@ -783,7 +812,7 @@ function relang(){ if (!inited) return; syncWalkTexts(); buildLabels(); invalida
 
 export function createView3D(){
   const api = {
-    enter, exit, relang, shot, groundAt,
+    enter, exit, relang, shot, groundAt, warm,
     sync: () => sync(),
     flyToRoomView: (id: string) => { if (active && !anim) flyToRoomView(id); },
     flyOverview: () => { if (active && !anim) flyOverview(); },
@@ -792,7 +821,7 @@ export function createView3D(){
     setMode: (m: 'orbit' | 'walk') => { if (active) setMode(m, false); },
     walking: () => active && opt.mode === 'walk',
     // 성능 측정용: 그림 호출 수·삼각형 수·지금까지 그린 횟수
-    stats: () => ({calls: renderer?.info.render.calls ?? 0, triangles: renderer?.info.render.triangles ?? 0, geometries: renderer?.info.memory.geometries ?? 0, textures: renderer?.info.memory.textures ?? 0, programs: renderer?.info.programs?.length ?? 0, shapes: geoCacheSize(), renders, merged: MERGE, why}),
+    stats: () => ({calls: renderer?.info.render.calls ?? 0, triangles: renderer?.info.render.triangles ?? 0, geometries: renderer?.info.memory.geometries ?? 0, textures: renderer?.info.memory.textures ?? 0, programs: renderer?.info.programs?.length ?? 0, shapes: geoCacheSize(), near: camera ? +camera.near.toFixed(3) : 0, renders, merged: MERGE, why}),
   };
   (window as unknown as {__wmh3d: typeof api}).__wmh3d = api;
   return api;
