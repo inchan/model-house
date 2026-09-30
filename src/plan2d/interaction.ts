@@ -1,14 +1,13 @@
 /* ======================= 2D 포인터 조작 (마우스 · 펜 · 손가락) ======================= */
-import { $, esc, TAP } from '../core/dom';
+import { TAP } from '../core/dom';
 import { state, ui, view, getF, snap, commit, mutate, select } from '../core/state';
-import { rotateSel, toggleWall } from '../core/actions';
-import { roomName } from '../core/names';
+import { rotateSel } from '../core/actions';
 import { norm } from '../core/geometry';
 import { closeDrawers, closeMenu } from '../ui/layout';
 import { svg, toMM } from './svg';
 import { applyView, clampScale, zoomAt } from './view';
 import { snapMove, snapPoint } from './snap';
-import { renderFurn, renderSel, renderMeasure, roomAreaText } from './render';
+import { renderFurn, renderSel, renderMeasure } from './render';
 
 type Drag =
   | {kind: 'measure'; sx: number; sy: number; moved: boolean}
@@ -64,11 +63,9 @@ export function bindPlanPointer(){
       else { const a = ui.mA; ui.mA = null; ui.mCur = null; if (Math.hypot(q.x-a.x, q.y-a.y) > 20) mutate(() => { state.measures.push({a, b: q}); }); }
       renderMeasure(); return;
     }
-    const h = target.closest<SVGElement>('[data-handle]'), wall = target.closest<SVGElement>('[data-wall]'), fe = target.closest<SVGElement>('[data-fid]');
+    const h = target.closest<SVGElement>('[data-handle]'), fe = target.closest<SVGElement>('[data-fid]');
     if (h && ui.sel?.kind === 'furn'){
       drag = {kind: h.dataset.handle as 'rot' | 'size', id: ui.sel.id, sx: e.clientX, sy: e.clientY, ox: 0, oy: 0, before: snap(), moved: false};
-    } else if (ui.tool === 'demolish' && wall){
-      toggleWall(wall.dataset.wall!); return;
     } else if (ui.tool === 'select' && fe && getF(fe.dataset.fid!)){
       const f = getF(fe.dataset.fid!)!;
       if (ui.sel?.id !== f.id) select({kind: 'furn', id: f.id});
@@ -89,10 +86,7 @@ export function bindPlanPointer(){
       return;
     }
     const p = toMM(e);
-    $('#cx').textContent = Math.round(p.x) + ' mm'; $('#cy').textContent = Math.round(p.y) + ' mm';
     if (!drag){
-      const room = (e.target as Element).closest?.<SVGElement>('[data-room]')?.dataset.room;
-      $('#hover').innerHTML = room ? `<b>${esc(roomName(room))}</b> ${roomAreaText(room)}` : '';
       if (ui.tool === 'measure' && ui.mA){ ui.mCur = snapPoint(p, e.shiftKey); renderMeasure(); }
       return;
     }

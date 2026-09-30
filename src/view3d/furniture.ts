@@ -2,12 +2,18 @@
  * 외부 모델 파일 없이 기본 도형을 조합해 만든다. 같은 가구는 시드 난수로 매번 같은 모양(책 배치 등)이 나온다 */
 import * as THREE from 'three';
 import type { Furniture } from '../core/state';
-import { M, wx, wz } from './units';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { M, wx, wz, H } from './units';
 import { mat, rng, darker, lighter, glassMat, frameMat, metal, chrome, blackMetal, mirror, ceramic, fabric, woodM, screenMat, glowMat } from './materials';
 import { sh, mesh, rot, box, rbox, cyl, lathe, rod, tube, blob, ring, shell, legs, pull, fronts, vase, tableLamp, plate } from './prims';
 
-export function buildFurniture(f: Furniture): THREE.Group {
-  const g = new THREE.Group(), w = M(f.w), d = M(f.d), c = f.color || '#ddd', bz = -d/2, R = rng(Math.round(f.w*7 + f.d*13 + f.cx + f.cy));
+export type FurnLike = Pick<Furniture, 'type' | 'w' | 'd' | 'color' | 'cx' | 'cy' | 'rot'> & {id?: string};
+// upperGaps: 주방 상부장을 만들지 않을 구간(로컬 x, m) — 뒤쪽 벽에 창이 있는 곳
+export interface BuildOpts { upperGaps?: [number, number][] }
+
+// seed: 같은 가구는 옮겨도 모양(책·잎 배치 등)이 그대로이도록 id에서 만든 값을 쓴다
+function buildLocal(f: FurnLike, o: BuildOpts, seed: number): THREE.Group {
+  const g = new THREE.Group(), w = M(f.w), d = M(f.d), c = f.color || '#ddd', bz = -d/2, R = rng(seed);
   switch (f.type){
     case 'bed': {
       const fr = woodM('#8d7258'), fab = fabric(c), fh = .3, mt = .22, top = fh + mt, n = Math.max(3, Math.round(w/.28)), sw = (w - .04)/n;
@@ -227,8 +233,14 @@ export function buildFurniture(f: Furniture): THREE.Group {
       g.add(box(w - .01, .1, d - .1, '#4a4641', 0, 0, -.05), box(w, .72, d - .04, cm, 0, .1, -.02));
       fronts(g, -w/2, .64, w, .18, fz, n, 1, cm, 'bar'); fronts(g, -w/2, .1, w, .54, fz, n, 1, cm, 'bar', .56);
       g.add(rbox(w + .01, .04, d, stone, 0, .82, 0, .004), box(w, .62, .01, mat('#efece6', {roughness:.3}), 0, .86, bz + .005));
-      g.add(box(w, .7, .33, cm, 0, 1.48, bz + .165)); fronts(g, -w/2, 1.48, w, .7, bz + .33, n, 1, cm, 'bar', 1.56);
-      g.add(box(w - .04, .01, .02, glowMat('#fff7e6', '#ffe9c4', .8), 0, 1.47, bz + .29));
+      // 상부장: 뒤쪽 벽에 창이 있는 구간은 비운다
+      let segs: [number, number][] = [[-w/2, w/2]];
+      for (const [g0, g1] of o.upperGaps ?? []) segs = segs.flatMap(([a0, a1]): [number, number][] => (g1 <= a0 || g0 >= a1) ? [[a0, a1]] : [[a0, Math.max(a0, g0 - .02)], [Math.min(a1, g1 + .02), a1]]).filter(([a0, a1]) => a1 - a0 > .25);
+      for (const [a0, a1] of segs){
+        const sw = a1 - a0, sx = (a0 + a1)/2, sn = Math.max(1, Math.round(sw/.6));
+        g.add(box(sw, .7, .33, cm, sx, 1.48, bz + .165)); fronts(g, a0, 1.48, sw, .7, bz + .33, sn, 1, cm, 'bar', 1.56);
+        g.add(box(sw - .04, .01, .02, glowMat('#fff7e6', '#ffe9c4', .8), sx, 1.47, bz + .29));
+      }
       if (w >= .8){
         g.add(rbox(.36, .018, .25, woodM('#c9a27a'), -w/2 + .3, .86, .0, .005));
         [.07, .06, .05].forEach((r, i) => g.add(cyl(r, r, .16 - i*.03, mat(['#e9e2d6', '#d6cfc3', '#bfb6a8'][i], {roughness:.4}), w/2 - .15 - i*.15, .86, bz + .1, 24)));
@@ -411,10 +423,10 @@ export function buildFurniture(f: Furniture): THREE.Group {
       const h = .3, am = mat(c, {roughness:.3}), s = new THREE.Shape();
       s.moveTo(0, .02); s.lineTo(0, h); s.lineTo(d*.75, h); s.quadraticCurveTo(d, h, d, h*.55); s.quadraticCurveTo(d, 0, d*.55, 0); s.lineTo(.02, 0); s.lineTo(0, .02);
       const geo = new THREE.ExtrudeGeometry(s, {depth:w - .02, bevelEnabled:true, bevelThickness:.01, bevelSize:.006, bevelSegments:3, curveSegments:16});
-      geo.rotateY(-Math.PI/2); geo.translate((w - .02)/2, 2.2, bz); g.add(mesh(geo, am));
-      g.add(box(w - .12, .004, .07, '#3a3d40', 0, 2.19, bz + d*.55), rot(box(w - .12, .008, .06, am, 0, 2.18, bz + d*.72), .35));
-      g.add(box(.06, .018, .002, mat('#101214', {emissive:'#4fb3a5', emissiveIntensity:.7}), w*.3, 2.2 + h*.5, bz + d + .007));
-      for (let i = 0; i < 6; i++) g.add(box(w - .12, .003, .008, '#d5d9dc', 0, 2.2 + h + .006, bz + .03 + i*.022));
+      geo.rotateY(-Math.PI/2); geo.translate((w - .02)/2, 2.02, bz); g.add(mesh(geo, am));
+      g.add(box(w - .12, .004, .07, '#3a3d40', 0, 2.01, bz + d*.55), rot(box(w - .12, .008, .06, am, 0, 2.0, bz + d*.72), .35));
+      g.add(box(.06, .018, .002, mat('#101214', {emissive:'#4fb3a5', emissiveIntensity:.7}), w*.3, 2.02 + h*.5, bz + d + .007));
+      for (let i = 0; i < 6; i++) g.add(box(w - .12, .003, .008, '#d5d9dc', 0, 2.02 + h + .006, bz + .03 + i*.022));
       break;
     }
     case 'dishwasher': {
@@ -485,10 +497,126 @@ export function buildFurniture(f: Furniture): THREE.Group {
       cg.add(rbox(w*.8, .2, .08, bm, 0, -.1, 0, .02), box(w*.4, .11, .004, screenMat('#2a5d8f'), 0, -.055, .041)); g.add(cg);
       break;
     }
+    // ---- 한국 아파트 붙박이·가전 ----
+    case 'induction': {
+      g.add(rbox(w, .012, d, mat('#0c0c0d', {roughness:.05, metalness:.3}), 0, .862, 0, .004));
+      const rr = Math.min(w, d)*.2, pts: [number, number][] = w >= d*1.2 ? [[-w*.25, 0], [w*.22, -d*.12], [w*.2, d*.24]] : [[0, -d*.2], [0, d*.22]];
+      pts.forEach(([x, z]) => g.add(ring(rr, .003, mat('#6d6d72', {emissive:'#3a1a10', emissiveIntensity:.15}), x, .876, z)));
+      g.add(box(.12, .002, .03, mat('#101214', {emissive:'#ff7a3c', emissiveIntensity:.6}), 0, .875, d/2 - .05));
+      // 슬림 후드
+      g.add(rbox(w*.9, .05, .45, mat('#c9ced3', {metalness:.8, roughness:.3}), 0, 1.55, bz + .225, .01));
+      break;
+    }
+    case 'dressshelf': {
+      const wm = woodM(c), h = 2.2, n = Math.max(2, Math.round(w/.8)), cw = w/n;
+      g.add(box(w, h, .012, woodM(darker(c, .92)), 0, 0, bz + .006));
+      for (let i = 0; i <= n; i++) g.add(box(.022, h, d - .02, wm, -w/2 + .011 + i*(w - .022)/n, 0, .005));
+      g.add(box(w, .022, d - .02, wm, 0, h - .022, .005), box(w, .08, d - .02, wm, 0, 0, .005));
+      const cols = ['#e9e2d6', '#9aa7b3', '#c9b59a', '#f4f1ea', '#6f7c86', '#d8c3b0', '#3f4a52', '#b9a58c'];
+      for (let i = 0; i < n; i++){
+        const x0 = -w/2 + i*cw;
+        if (i % 2 === 0){
+          // 행거 칸: 옷걸이 봉 + 걸린 옷
+          g.add(rod([x0 + .03, 1.75, 0], [x0 + cw - .03, 1.75, 0], .01, chrome()));
+          for (let k = 0; k < Math.floor((cw - .1)/.07); k++) g.add(box(.02, .75 + R()*.2, d*.7, fabric(cols[Math.floor(R()*8)]), x0 + .07 + k*.07, 1.75 - .95 + R()*.1, 0));
+          g.add(box(cw - .04, .022, d - .03, wm, x0 + cw/2, .7, .005));
+          fronts(g, x0 + .02, .1, cw - .04, .55, d/2 - .01, 1, 2, wm, 'edge');
+        } else {
+          // 선반 칸: 접힌 옷과 상자
+          for (let k = 0; k < 6; k++){
+            const y = .1 + k*.34; g.add(box(cw - .04, .02, d - .03, wm, x0 + cw/2, y, .005));
+            if (k > 0 && k < 5) g.add(box(cw*.55, .1 + R()*.08, d*.6, fabric(cols[Math.floor(R()*8)]), x0 + cw/2, y + .02, .02));
+          }
+        }
+      }
+      break;
+    }
+    case 'ceilingac': {
+      const am = mat('#f7f7f5', {roughness:.35});
+      g.add(rbox(w, .03, d, am, 0, H - .035, 0, .012), box(w*.52, .004, d*.52, mat('#e2e5e7', {roughness:.6}), 0, H - .039, 0));
+      for (let k = 0; k < 4; k++){ const a = k*Math.PI/2; g.add(rot(box(w*.58, .004, .05, '#c7ccd0', Math.sin(a)*w*.36, H - .04, Math.cos(a)*d*.36), 0, a)); }
+      break;
+    }
+    case 'washtower': {
+      const bm = mat(c, {roughness:.35}), fz = d/2 - .02;
+      g.add(box(w - .02, .04, d - .04, '#8f969b', 0, 0, -.02), rbox(w, 1.86, d - .02, bm, 0, .04, -.01, .025));
+      g.add(box(w - .04, .16, .006, lighter(c, .3), 0, .93, fz + .003), box(.2, .05, .003, screenMat('#1f6f6a'), 0, .99, fz + .007));
+      [[.45, '#26343d'], [1.42, '#4a4038']].forEach(([y, glass]) => {
+        const yy = y as number, R0 = Math.min(w, .6)*.26;
+        const dr = new THREE.Mesh(new THREE.CircleGeometry(R0, 40), mat('#1b1f22', {roughness:.6})); dr.position.set(0, yy, fz + .004); g.add(dr);
+        const rg = new THREE.Mesh(new THREE.TorusGeometry(R0 + .02, .02, 14, 48), mat('#c7cfd5', {metalness:.7, roughness:.25})); rg.position.set(0, yy, fz + .016); sh(rg); g.add(rg);
+        const cap = new THREE.Mesh(new THREE.CircleGeometry(R0, 40), mat(glass as string, {roughness:.04, metalness:.2, transparent:true, opacity:.75})); cap.position.set(0, yy, fz + .02); g.add(cap);
+      });
+      break;
+    }
+    case 'entrytall': {
+      const cm = mat(c, {roughness:.5}), fz = d/2 - .015, n = Math.max(1, Math.round(w/.45));
+      g.add(box(w - .02, .08, d - .04, '#4a4641', 0, 0, -.02), box(w, .82, d - .02, cm, 0, .08, -.01));
+      fronts(g, -w/2, .08, w, .82, fz, n, 1, cm, 'edge');
+      g.add(box(w, .02, d, woodM(darker(c, .8)), 0, .9, 0), box(w - .04, .01, .02, glowMat('#fff7e6', '#ffe9c4', .9), 0, 1.2, bz + .2));   // 가운데 열린 칸 + 간접조명
+      g.add(box(w, 1.03, d - .02, cm, 0, 1.22, -.01)); fronts(g, -w/2, 1.22, w, 1.03, fz, n, 1, cm, 'edge');
+      vase(g, w*.25, .92, 0, .045, .16, '#e9e2d6', R, false);
+      break;
+    }
+    case 'acunit': {
+      const um = mat('#eceeef', {roughness:.5});
+      g.add(box(w, .6, d, um, 0, .05, 0), box(w, .05, d, '#8f969b', 0, 0, 0));
+      g.add(ring(.2, .012, mat('#9aa0a5', {roughness:.5}), -w*.12, .35, d/2 + .002));
+      const grill = new THREE.Mesh(new THREE.CircleGeometry(.2, 32), mat('#3a3d40', {roughness:.8})); grill.position.set(-w*.12, .35, d/2 + .001); g.add(grill);
+      break;
+    }
+    case 'massagechair': {
+      const lm = mat(c, {roughness:.5}), dk = mat(darker(c, .75), {roughness:.55}), lt = mat(lighter(c, .25), {roughness:.6});
+      g.add(rbox(w*.9, .1, d*.8, dk, 0, 0, 0, .04));
+      g.add(rot(rbox(w*.62, .18, d*.42, lm, 0, .42, -d*.02, .06), -.05));                                 // 좌판
+      g.add(rot(rbox(w*.66, 1.0, .26, lm, 0, .48, bz + .22, .1), -.42));                                   // 등받이(기울어짐)
+      g.add(rot(rbox(w*.58, .16, .22, lt, 0, 1.18, bz + .02, .08), -.42));                                 // 머리 받침
+      g.add(rot(rbox(w*.46, .5, .22, lm, 0, .12, d/2 - .2, .08), .5));                                     // 다리 받침
+      [-1, 1].forEach(s => g.add(rbox(.14, .5, d*.55, dk, s*(w/2 - .08), .12, -d*.04, .06)));             // 팔걸이
+      g.add(box(.08, .005, .12, screenMat('#2a5d8f'), w/2 - .08, .63, d*.1));
+      break;
+    }
     default: g.add(box(w, .8, d, c));
   }
+  return g;
+}
+
+// 가구 하나 = 재질별로 합친 메시 몇 개 (그림 호출 수를 크게 줄인다). 도면 위치·회전을 적용해 돌려준다
+export function buildFurniture(f: FurnLike, o: BuildOpts = {}, merge = true, seed = Math.round(f.w*7 + f.d*13 + f.cx + f.cy)): THREE.Group {
+  const local = buildLocal(f, o, seed), g = merge ? mergeByMaterial(local) : local;
   g.position.set(wx(f.cx), 0, wz(f.cy));
   g.rotation.y = -f.rot * Math.PI/180;       // 평면의 시계 방향 회전 → Y축 음의 방향 회전
-  g.userData.fid = f.id;
+  if (f.id) g.userData.fid = f.id;
   return g;
+}
+
+const KEEP_ATTRS = ['position', 'normal', 'uv'];
+function mergeByMaterial(src: THREE.Group): THREE.Group {
+  src.updateMatrixWorld(true);
+  const buckets = new Map<string, {mat: THREE.Material; cast: boolean; geos: THREE.BufferGeometry[]}>();
+  const out = new THREE.Group();
+  src.traverse(obj => {
+    const m = obj as THREE.Mesh;
+    if (!m.isMesh) return;
+    if (Array.isArray(m.material)){ const c = m.clone(); c.applyMatrix4(m.matrixWorld); out.add(c); return; }
+    const geo = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
+    Object.keys(geo.attributes).forEach(k => { if (!KEEP_ATTRS.includes(k)) geo.deleteAttribute(k); });
+    if (!geo.attributes.normal) geo.computeVertexNormals();
+    if (!geo.attributes.uv) geo.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(geo.attributes.position.count*2), 2));
+    geo.applyMatrix4(m.matrixWorld);
+    const key = m.material.uuid + (m.castShadow ? '1' : '0');
+    let b = buckets.get(key);
+    if (!b){ b = {mat: m.material, cast: m.castShadow, geos: []}; buckets.set(key, b); }
+    b.geos.push(geo);
+  });
+  src.traverse(obj => { const m = obj as THREE.Mesh; if (m.isMesh) m.geometry.dispose(); });
+  buckets.forEach(({mat, cast, geos}) => {
+    const merged = mergeGeometries(geos, false);
+    geos.forEach(g => g.dispose());
+    if (!merged) return;
+    const mesh = new THREE.Mesh(merged, mat);
+    mesh.castShadow = cast; mesh.receiveShadow = true;
+    out.add(mesh);
+  });
+  return out;
 }

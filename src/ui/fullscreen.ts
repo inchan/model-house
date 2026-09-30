@@ -19,7 +19,7 @@ export function toggleFullscreen(){
 
 export function syncFullscreen(){
   const on = !!fsEl(), b = $('#fullscreen'), label = on ? t('tb.exitFullscreen') : t('tb.fullscreen');
-  b.innerHTML = icon(on ? 'exitFullscreen' : 'fullscreen') + `<span>${label}</span>`;
+  b.innerHTML = icon(on ? 'exitFullscreen' : 'fullscreen');
   b.title = label + ' (Shift+F)';
 }
 

@@ -1,31 +1,30 @@
 /* ======================= 가구 목록 ======================= */
-import { $, $$, esc, COARSE, TAP, narrow } from '../core/dom';
+import { $, $$, esc, TAP, narrow } from '../core/dom';
 import { ui, view } from '../core/state';
 import { bbox } from '../core/geometry';
 import { catName, libName } from '../core/names';
 import { addItem } from '../core/actions';
 import { LIB, type LibItem } from '../data/library';
-import { ROOMS } from '../data/plan';
+import { plan } from '../core/plan';
 import { furnSVG } from '../plan2d/symbols';
 import { toMM } from '../plan2d/svg';
 import { viewCenter } from '../plan2d/view';
 import { t } from '../i18n';
-import { drawer, closeDrawers } from './layout';
+import { closeDrawers } from './layout';
 import { is3D, get3D } from './mode';
 import { toast } from './toast';
 
 const itemOf = (el: HTMLElement): LibItem => { const [ci, ii] = el.dataset.key!.split(':').map(Number); return LIB[ci].items[ii]; };
 
-export function buildLib(){
-  const how = COARSE ? t('lib.howTouch') : t('lib.how');
-  $('#lib').innerHTML = LIB.map((c, ci) => `<h4>${esc(catName(c.cat))}</h4><div class="lib-grid">${c.items.map((it, ii) => {
+export function buildLibInto(el: HTMLElement){
+  el.innerHTML = LIB.map((c, ci) => `<h4>${esc(catName(c.cat))}</h4><div class="lib-grid">${c.items.map((it, ii) => {
     const pad = Math.max(it.w, it.d)*.08;
-    return `<div class="item" data-key="${ci}:${ii}" title="${t('lib.itemTitle')}">
+    return `<div class="item" data-key="${ci}:${ii}" title="${t('furn.sub')}">
       <svg viewBox="${-it.w/2-pad} ${-it.d/2-pad} ${it.w+2*pad} ${it.d+2*pad}">${furnSVG(it.type, it.w, it.d, it.color)}</svg><b>${esc(libName(it.key))}</b><small>${it.w}×${it.d}</small></div>`;
-  }).join('')}</div>`).join('') + `<div class="hint">${esc(t('lib.hint', {how}))}</div>`;
-  $$('#lib .item').forEach(el => el.addEventListener('pointerdown', e => {
+  }).join('')}</div>`).join('');
+  $$('.item', el).forEach(item => item.addEventListener('pointerdown', e => {
     if (e.button) return;
-    libDrag = {el, id: e.pointerId, sx: e.clientX, sy: e.clientY, it: itemOf(el), ghost: null};
+    libDrag = {el: item, id: e.pointerId, sx: e.clientX, sy: e.clientY, it: itemOf(item), ghost: null};
   }));
 }
 
@@ -37,7 +36,7 @@ let libDrag: {el: HTMLElement; id: number; sx: number; sy: number; it: LibItem; 
 function dropPoint(x: number, y: number): {x: number; y: number; s: number} | null {
   const r = $('#stage').getBoundingClientRect();
   if (x < r.left || x > r.right || y < r.top || y > r.bottom) return null;
-  if (document.elementFromPoint(x, y)?.closest('aside.open,#fab,#walkOverlay,#joy,#walkExit')) return null;
+  if (document.elementFromPoint(x, y)?.closest('#side.open,#fab,#walkOverlay,#joy,#walkExit,#roomTabs,#minimap,.float-tools,.stage-info')) return null;
   if (is3D()) return get3D()?.groundAt(x, y) ?? null;
   const p = toMM({clientX: x, clientY: y}); return {x: p.x, y: p.y, s: view.s};
 }
@@ -55,8 +54,8 @@ export function bindLibDrag(){
     // 끌고 있는 모양을 놓일 지점의 축척에 맞춰 실제 크기로 보여 준다 (3D에서는 멀수록 작게)
     const g = libDrag.ghost, s = Math.max(dropPoint(e.clientX, e.clientY)?.s || (is3D() ? .05 : view.s), .02);
     Object.assign(g.style, {width: Math.max(28, it.w*s) + 'px', height: Math.max(20, it.d*s) + 'px', left: e.clientX + 'px', top: e.clientY + 'px'});
-    const lib = $('aside.lib');
-    if (narrow() && lib.classList.contains('open') && e.clientX > lib.getBoundingClientRect().right) drawer(null);   // 서랍 밖으로 끌면 자동으로 닫는다
+    const side = $('#side');
+    if (narrow() && side.classList.contains('open') && e.clientY < side.getBoundingClientRect().top) closeDrawers();   // 시트 밖으로 끌면 시트를 내린다
   });
   const end = (e: PointerEvent, ok: boolean) => {
     if (!libDrag || e.pointerId !== libDrag.id) return;
@@ -73,7 +72,7 @@ export function bindLibDrag(){
     if (!ok) return;
     // 그냥 누른 경우: 선택한 방이 있으면 그 방 가운데, 없으면 화면 가운데 (3D는 화면 가운데가 가리키는 바닥)
     let p: {x: number; y: number} | null = null;
-    const room = ui.sel?.kind === 'room' ? ROOMS.find(r => r.id === ui.sel!.id) : undefined;
+    const room = ui.sel?.kind === 'room' ? plan().rooms.find(r => r.id === ui.sel!.id) : undefined;
     if (room){ const b = bbox(room.poly); p = {x: (b[0]+b[2])/2, y: (b[1]+b[3])/2}; }
     else if (is3D()){ const r = $('#stage').getBoundingClientRect(); p = get3D()?.groundAt(r.left + r.width/2, r.top + r.height/2) ?? null; }
     p ??= viewCenter();

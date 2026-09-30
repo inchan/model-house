@@ -115,6 +115,25 @@ export function furnSVG(t: string, w: number, d: number, c: string): string {
       return s;
     }
     case 'treadmill': return rc(x,y,w,d,c,'rx="50"') + rc(x+90,y+320,w-180,d-400,'#1c1c1e','rx="25"') + rc(x,y,w,230,shade(c,1.4),'rx="40"');
+    // ---- 한국 아파트 붙박이·가전 ----
+    case 'induction': {
+      let s = rc(x,y,w,d,'#1b1c1e','rx="25"');
+      const r = Math.min(w, d)*.2, pts = w >= d*1.2 ? [[-w*.25, 0], [w*.25, -d*.12], [w*.2, d*.25]] : [[0, -d*.2], [0, d*.22]];
+      pts.forEach(([px, py]) => s += `<circle cx="${px}" cy="${py}" r="${r}" fill="none" stroke="#8a8a8e" stroke-width="1" vector-effect="non-scaling-stroke"/>`);
+      return s;
+    }
+    case 'dressshelf': {
+      let s = rc(x,y,w,d,c) + ln(x+40,0,x+w-40,0,DASH);
+      for (let hx = x+120; hx < x+w-80; hx += 140) s += ln(hx-40,-d*.3,hx+40,d*.3,'opacity=".45"');
+      return s;
+    }
+    case 'ceilingac': return rc(x,y,w,d,'#ffffff',`rx="40" ${DASH}`) + rc(x+w*.2,y+d*.2,w*.6,d*.6,'none',`rx="30" ${DASH} opacity=".7"`)
+      + [0,1,2,3].map(k => `<rect x="${-w*.3}" y="${-d*.42}" width="${w*.6}" height="${d*.07}" transform="rotate(${k*90})" fill="#cfd3d6" stroke="none"/>`).join('');
+    case 'washtower': return rc(x,y,w,d,c,'rx="30"') + rc(x,y,w,d*.16,shade(c,.9)) + `<circle cy="${d*.08}" r="${Math.min(w,d)*.3}" fill="#fff" ${ST}/><circle cy="${d*.08}" r="${Math.min(w,d)*.18}" fill="#cfdde4" ${ST}/>`;
+    case 'entrytall': return rc(x,y,w,d,c) + ln(x,y,x+w,y+d,'opacity=".5"') + ln(x+w,y,x,y+d,'opacity=".5"');
+    case 'acunit': return rc(x,y,w,d,c,'rx="15"') + `<circle cx="${-w*.12}" r="${d*.36}" fill="none" ${ST}/>` + ln(x+w*.62,y+d*.2,x+w*.62,y+d*.8,'opacity=".6"') + ln(x+w*.75,y+d*.2,x+w*.75,y+d*.8,'opacity=".6"');
+    case 'massagechair': return rc(x,y,w,d*.3,shade(c,.85),'rx="80"') + rc(x+w*.08,y+d*.26,w*.84,d*.42,c,'rx="60"') + rc(x+w*.15,y+d*.66,w*.7,d*.34,shade(c,1.12),'rx="60"')
+      + rc(x,y+d*.3,w*.14,d*.36,shade(c,.75),'rx="40"') + rc(x+w*.86,y+d*.3,w*.14,d*.36,shade(c,.75),'rx="40"');
     default: return rc(x,y,w,d,c);
   }
 }

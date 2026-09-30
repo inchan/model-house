@@ -1,13 +1,13 @@
 /* ======================= 붙이기 (격자 · 벽) ======================= */
-import { state, ui, view, type Furniture, type Pt } from '../core/state';
+import { ui, view, type Furniture, type Pt } from '../core/state';
 import { aabb } from '../core/geometry';
-import { WALLS, WINS, type Rect } from '../data/plan';
+import { plan } from '../core/plan';
+import type { Rect } from '../data/apt/schema';
 
 const GRID = 10;   // mm
 
-// 가구·측정선이 붙을 수 있는 사각형: 철거하지 않은 벽 + 창
-export const snapRects = (): Rect[] =>
-  WALLS.filter((_, i) => !state.demolished.includes('w' + i)).map(w => [w[0], w[1], w[2], w[3]] as Rect).concat(WINS);
+// 가구·측정선이 붙을 수 있는 사각형: 벽 + 창
+export const snapRects = (): Rect[] => { const p = plan(); return [...p.walls.map(w => w.rect), ...p.wins.map(w => w.rect)]; };
 
 // 가구 중심을 격자에 맞추고, 벽 가까이면 가구 면이 벽면에 닿도록 붙인다
 export function snapMove(f: Furniture, cx: number, cy: number): [number, number] {

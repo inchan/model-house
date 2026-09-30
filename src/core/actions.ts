@@ -1,12 +1,14 @@
 /* ======================= 편집 동작 ======================= */
-import { state, ui, mutate, getF, uid, F, undo } from './state';
+import { state, ui, mutate, getF, uid, F, undo, defaultTypeState, styledRooms, stagedFurniture } from './state';
 import { norm } from './geometry';
 import { libName } from './names';
-import { WALLS } from '../data/plan';
+import type { OptionId, TypeId } from '../data/apt/schema';
 import type { LibItem } from '../data/library';
+import type { MatKey } from '../data/materials';
+import { STYLES, type StyleId, type WallpaperId } from '../data/styles';
 import { pushOut } from '../plan2d/snap';
 import { toast } from '../ui/toast';
-import { t } from '../i18n';
+import { t, tKey } from '../i18n';
 
 export const undoOrToast = () => { if (!undo()) toast(t('toast.nothingToUndo')); };
 
@@ -43,19 +45,47 @@ export function addItem(it: LibItem, x: number, y: number){
   toast(t('toast.added', {name: libName(it.key), w: it.w, d: it.d}));
 }
 
-export function toggleWall(id: string){
-  const w = WALLS[+id.slice(1)]; if (!w) return;
-  if (w[4] === 'b') return toast(t('toast.bearing'));
-  if (w[4] === 'e') return toast(t('toast.exterior'));
-  const on = state.demolished.includes(id);
-  mutate(() => { state.demolished = on ? state.demolished.filter(x => x !== id) : [...state.demolished, id]; });
-  toast(on ? t('toast.wallRestored') : t('toast.wallRemoved', {len: Math.max(w[2]-w[0], w[3]-w[1])}));
-}
-
 export function clearLayout(){
   const n = state.furniture.length;
   if (!n) return toast(t('toast.noFurniture'));
   if (!confirm(t('confirm.clear', {n}))) return;
   ui.sel = null; mutate(() => { state.furniture = []; });
   toast(t('toast.cleared'));
+}
+
+/* ---------- 모델하우스 선택 사항 ---------- */
+export function setOption(id: OptionId, on: boolean){
+  mutate(() => { state.opts = {...state.opts, [id]: on}; });
+}
+
+// 스타일 패키지: 바닥재·벽지·가구 색(역할이 있는 가구만)을 한 번에 바꾼다. 가구 위치는 그대로
+export function applyStyle(id: StyleId){
+  if (id === state.style) return;
+  mutate(() => {
+    state.style = id; state.wall = STYLES[id].wall;
+    state.rooms = styledRooms(state.type, id, state.rooms);
+    state.furniture.forEach(f => { if (f.role) f.color = STYLES[id].colors[f.role]; });
+  });
+  toast(t('toast.styleApplied', {name: tKey('style.' + id)}));
+}
+
+export function setWallpaper(id: WallpaperId){ if (id !== state.wall) mutate(() => { state.wall = id; }); }
+export function setRoomMat(room: string, mat: MatKey){ mutate(() => { state.rooms[room] = {...state.rooms[room], mat}; }); }
+
+// 타입 전환: 지금 타입의 배치를 보관하고, 다른 타입은 보관해 둔 배치 또는 현재 스타일의 기본 연출로 연다
+export function switchType(id: TypeId){
+  if (id === state.type) return;
+  ui.sel = null; ui.mA = ui.mCur = null;
+  mutate(() => {
+    state.stash[state.type] = {furniture: state.furniture, rooms: state.rooms, measures: state.measures};
+    const next = state.stash[id] ?? defaultTypeState(id, state.style);
+    delete state.stash[id];
+    state.type = id; state.furniture = next.furniture; state.rooms = next.rooms; state.measures = next.measures;
+  });
+}
+
+// 지금 타입을 현재 스타일의 기본 연출로 되돌린다 (옵션·스타일은 유지)
+export function restage(){
+  ui.sel = null;
+  mutate(() => { state.furniture = stagedFurniture(state.type, state.style); state.rooms = styledRooms(state.type, state.style); state.measures = []; });
 }

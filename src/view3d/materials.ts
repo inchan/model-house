@@ -17,6 +17,8 @@ export function initMaterials(renderer: THREE.WebGLRenderer, env: THREE.Texture)
   wallMat = mat('#f4f1eb', {roughness:.92}); capMat = mat('#34312d', {roughness:.9}); frameMat = mat('#5d6166', {roughness:.5, metalness:.4});
 }
 
+export function setWallColor(hex: string){ if (wallMat) wallMat.color.set(hex); }
+
 export function mat(color: THREE.ColorRepresentation, o: THREE.MeshStandardMaterialParameters = {}): THREE.MeshStandardMaterial {
   const key = String(color) + JSON.stringify(o);
   let m = matCache.get(key);

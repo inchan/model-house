@@ -6,126 +6,120 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#fffdf9">
-<title>모델하우스 플래너</title>
+<meta name="theme-color" content="#f5f1e8">
+<meta name="description" content="입주 전, 우리 집을 먼저 걸어보는 사이버 모델하우스">
+<title>우리집 모델하우스</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231f5a44'/%3E%3Cpath d='M8 15.5 16 9l8 6.5V24h-5v-5h-6v5H8z' fill='%23f5f1e8'/%3E%3C/svg%3E">
 <script type="module" src="/src/main.ts"></script>
 </head>
 <body>
 <!-- 문구는 src/i18n 사전에서 채운다: data-i18n(본문) · data-i18n-title(툴팁) · data-icon(Lucide 아이콘) -->
 <div class="app">
-  <header>
-    <div class="grp" id="paneBtns">
-      <button class="btn chip" id="tgLib" data-icon="panelLeft"><span data-i18n="tb.lib"></span></button>
-      <button class="btn chip" id="tgPanel" data-icon="panelRight"><span data-i18n="tb.panel"></span></button>
+  <header class="topbar">
+    <button class="brand" id="homeBtn" data-i18n-title="top.home">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"/><path d="M8 15.5 16 9l8 6.5V24h-5v-5h-6v5H8z"/></svg>
+      <span data-i18n="app.brand"></span>
+    </button>
+    <div class="seg" id="typeSeg" role="tablist"></div>
+    <div class="seg seg-view" id="viewSeg" role="tablist">
+      <button class="btn" data-view="3d" data-icon="view3d"><span data-i18n="view.tour"></span></button>
+      <button class="btn" data-view="2d" data-icon="plan2d"><span data-i18n="view.plan"></span></button>
+      <button class="btn" data-view="walk" data-icon="walk"><span data-i18n="view.walk"></span></button>
     </div>
-    <div class="brand"><b data-i18n="app.brand"></b><span id="subtitle"></span></div>
-    <div class="grp seg" id="viewSeg" data-i18n-title="tb.viewSwitch">
-      <span class="pill"></span>
-      <button class="btn" data-view="2d" data-i18n="tb.plan2d"></button>
-      <button class="btn" data-view="3d" data-i18n="tb.view3d"></button>
-    </div>
-    <div class="grp only2d" id="tools">
-      <button class="btn on" data-tool="select" data-i18n-title="tb.selectTitle" data-icon="select"><span data-i18n="tb.select"></span></button>
-      <button class="btn" data-tool="measure" data-i18n-title="tb.measureTitle" data-icon="measure"><span data-i18n="tb.measure"></span></button>
-      <button class="btn" data-tool="demolish" data-i18n-title="tb.demolishTitle" data-icon="demolish"><span data-i18n="tb.demolish"></span></button>
-    </div>
-    <div class="grp only2d">
-      <button class="btn icon" id="zoomOut" data-i18n-title="tb.zoomOut" data-icon="zoomOut"></button>
-      <button class="btn icon" id="zoomIn" data-i18n-title="tb.zoomIn" data-icon="zoomIn"></button>
-      <button class="btn" id="fit" data-i18n-title="tb.fitTitle" data-icon="fit"><span data-i18n="tb.fit"></span></button>
-      <button class="btn" data-ratio="50" data-i18n-title="tb.scaleTitle">1:50</button>
-      <button class="btn" data-ratio="100" data-i18n-title="tb.scaleTitle">1:100</button>
-    </div>
-    <div class="grp only3d" id="modes3d">
-      <button class="btn on" data-mode="orbit" data-i18n="tb.orbit"></button>
-      <button class="btn" data-mode="walk" data-i18n="tb.walk"></button>
-    </div>
-    <div class="grp only3d">
-      <button class="btn" id="vIso" data-i18n="tb.iso"></button>
-      <button class="btn" id="vTop" data-i18n="tb.top"></button>
-    </div>
+    <div class="spacer"></div>
     <div class="grp">
       <button class="btn icon" id="undo" data-i18n-title="tb.undo" data-icon="undo"></button>
       <button class="btn icon" id="redo" data-i18n-title="tb.redo" data-icon="redo"></button>
-      <button class="btn danger" id="clearAll" data-i18n-title="tb.clearTitle" data-icon="eraser"><span data-i18n="tb.clear"></span></button>
     </div>
-    <div class="grp only2d" id="layers">
-      <button class="btn chip on" data-layer="dims" data-i18n="tb.layerDims"></button>
-      <button class="btn chip on" data-layer="labels" data-i18n="tb.layerRooms"></button>
-      <button class="btn chip on" data-layer="furn" data-i18n="tb.layerFurn"></button>
-      <button class="btn chip" data-layer="grid" data-i18n="tb.layerGrid"></button>
-      <button class="btn chip" data-layer="bearing" data-i18n="tb.layerBearing"></button>
-      <button class="btn chip on" data-layer="wallSnap" data-i18n="tb.layerSnap" data-i18n-title="tb.layerSnapTitle"></button>
-    </div>
-    <div class="grp only3d">
-      <button class="btn chip on" data-cut="2.8" data-i18n="tb.cutFull"></button>
-      <button class="btn chip" data-cut="1.2" data-i18n="tb.cutLow"></button>
-    </div>
-    <div class="grp only3d" id="toggles3d">
-      <button class="btn chip on" data-t="furn" data-i18n="tb.t3dFurn"></button>
-      <button class="btn chip on" data-t="labels" data-i18n="tb.t3dLabels"></button>
-      <button class="btn chip" data-t="night" data-i18n="tb.t3dNight"></button>
-    </div>
-    <div class="grp only3d"><label class="range"><span data-i18n="tb.sun"></span> <input type="range" id="sun" min="7" max="18" step=".25" value="10" style="width:84px"><span id="sunT">10:00</span></label></div>
-    <div class="spacer"></div>
-    <button class="btn outline" id="langBtn" data-icon="lang"><span>EN</span></button>
-    <button class="btn outline" id="fullscreen"></button>
-    <details class="menu"><summary class="btn"><span data-i18n="tb.file"></span><i class="ic" data-icon="chevron"></i></summary>
+    <button class="btn ghost" id="langBtn" data-icon="lang"><span>EN</span></button>
+    <button class="btn ghost icon" id="fullscreen"></button>
+    <details class="menu"><summary class="btn ghost icon" data-i18n-title="tb.more" data-icon="more"></summary>
       <div class="menu-pop">
-        <button class="btn" id="exportPng" data-i18n="tb.exportPng"></button>
-        <button class="btn" id="exportJson" data-i18n="tb.exportJson"></button>
-        <button class="btn" id="importJson" data-i18n="tb.importJson"></button>
-        <button class="btn danger" id="reset" data-i18n="tb.reset"></button>
+        <button class="btn" id="exportPng" data-icon="image"><span data-i18n="tb.exportPng"></span></button>
+        <button class="btn" id="exportJson" data-icon="download"><span data-i18n="tb.exportJson"></span></button>
+        <button class="btn" id="importJson" data-icon="upload"><span data-i18n="tb.importJson"></span></button>
+        <hr>
+        <button class="btn" id="restage" data-icon="reset"><span data-i18n="tb.restage"></span></button>
+        <button class="btn danger" id="clearAll" data-icon="eraser"><span data-i18n="tb.clear"></span></button>
       </div></details>
     <input type="file" id="fileIn" accept=".json,application/json" hidden>
   </header>
-
-  <aside class="lib">
-    <div id="lib3d" class="only3d">
-      <h4 data-i18n="lib.rooms3d"></h4>
-      <div id="roomList"></div>
-    </div>
-    <div id="lib"></div>
-  </aside>
 
   <main id="stage">
     <svg id="plan" class="tool-select" font-family="'Pretendard Variable',Pretendard,-apple-system,'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif">
       <defs id="defs"></defs>
       <g id="gGrid"></g>
       <g id="gRooms"></g>
+      <g id="gFix" pointer-events="none"></g>
       <g id="gFurn"></g>
-      <g id="gWalls"></g>
-      <g id="gOpen"></g>
+      <g id="gWalls" pointer-events="none"></g>
+      <g id="gOpen" pointer-events="none"></g>
       <g id="gLabels" pointer-events="none"></g>
       <g id="gDims" pointer-events="none"></g>
       <g id="gMeasure" pointer-events="none"></g>
       <g id="gSel"></g>
     </svg>
     <div id="view3d">
-      <div id="walkOverlay"><div><h3 data-i18n="v3d.walkTitle"></h3>
+      <div id="walkOverlay"><div class="card"><h3 data-i18n="v3d.walkTitle"></h3>
         <p id="wo1"></p>
         <p id="wo2"></p>
         <p id="wo3"></p></div></div>
       <div id="cross"></div>
       <div id="joy"><i></i></div>
-      <button class="btn primary" id="walkExit" data-i18n="v3d.walkExit"></button>
-      <div id="hint3d"></div>
+      <button class="btn primary" id="walkExit" data-icon="close"><span data-i18n="v3d.walkExit"></span></button>
     </div>
-    <div class="scalebar" id="scalebar"><span id="sbText">1 m</span><div class="bar" id="sbBar"></div></div>
+
+    <!-- 화면 위 정보·도구 -->
+    <div class="stage-info" id="stageInfo"></div>
+    <div class="float-tools only2d" id="tools2d">
+      <div class="grp">
+        <button class="btn on" data-tool="select" data-i18n-title="tb.selectTitle" data-icon="select"><span data-i18n="tb.select"></span></button>
+        <button class="btn" data-tool="measure" data-i18n-title="tb.measureTitle" data-icon="measure"><span data-i18n="tb.measure"></span></button>
+      </div>
+      <div class="grp" id="layers">
+        <button class="btn chip on" data-layer="dims" data-i18n="tb.layerDims"></button>
+        <button class="btn chip on" data-layer="labels" data-i18n="tb.layerRooms"></button>
+        <button class="btn chip on" data-layer="furn" data-i18n="tb.layerFurn"></button>
+        <button class="btn chip" data-layer="bearing" data-i18n="tb.layerBearing" data-i18n-title="tb.layerBearingTitle"></button>
+        <button class="btn chip" data-layer="grid" data-i18n="tb.layerGrid"></button>
+      </div>
+      <div class="grp">
+        <button class="btn icon" id="zoomOut" data-i18n-title="tb.zoomOut" data-icon="zoomOut"></button>
+        <button class="btn icon" id="zoomIn" data-i18n-title="tb.zoomIn" data-icon="zoomIn"></button>
+        <button class="btn icon" id="fit" data-i18n-title="tb.fitTitle" data-icon="fit"></button>
+      </div>
+    </div>
+    <div class="float-tools right only3d" id="tools3d">
+      <div class="grp"><label class="range" data-icon="sun"><input type="range" id="sun" min="7" max="19" step=".25" value="11" data-i18n-title="tb.sun"><span id="sunT">11:00</span></label></div>
+      <div class="grp">
+        <button class="btn chip" data-t="night" data-icon="moon"><span data-i18n="tb.t3dNight"></span></button>
+        <button class="btn chip" data-t="cut" data-icon="cut"><span data-i18n="tb.cutLow"></span></button>
+        <button class="btn chip on" data-t="furn" data-icon="furniture"><span data-i18n="tb.t3dFurn"></span></button>
+        <button class="btn chip on" data-t="labels" data-icon="info"><span data-i18n="tb.t3dLabels"></span></button>
+      </div>
+    </div>
+    <div id="hint3d" class="only3d"></div>
+    <div id="minimap" class="only3d" data-i18n-title="map.title"></div>
+    <nav id="roomTabs" aria-label="rooms"></nav>
+    <div class="scalebar only2d" id="scalebar"><span id="sbText">1 m</span><div class="bar" id="sbBar"></div></div>
     <div class="modehint" id="modehint"></div>
     <div id="fab"></div>
   </main>
 
-  <aside class="right"><div id="panel"></div></aside>
+  <aside id="side">
+    <div class="side-tabs" role="tablist">
+      <button class="tab" data-tab="options" data-icon="options"><span data-i18n="tab.options"></span></button>
+      <button class="tab" data-tab="style" data-icon="palette"><span data-i18n="tab.style"></span></button>
+      <button class="tab" data-tab="furniture" data-icon="furniture"><span data-i18n="tab.furniture"></span></button>
+    </div>
+    <div id="sidePanel"></div>
+  </aside>
 
-  <footer>
-    <span class="only2d">X <b id="cx">—</b></span><span class="only2d">Y <b id="cy">—</b></span>
-    <span class="only2d"><span data-i18n="footer.scale"></span> <b id="ratio">—</b></span>
-    <span id="hover" class="only2d"></span>
-    <span class="spacer"></span>
-    <span id="tip"></span>
-  </footer>
+  <footer id="estimateBar"></footer>
 </div>
-<div id="toast"></div>
+
+<div id="landing" hidden></div>
+<div id="summary" class="modal" hidden></div>
+<div id="toast" role="status"></div>
 </body>
 </html>
