@@ -39,6 +39,19 @@ with sync_playwright() as p:
     s1 = pg.evaluate('window.__wmh3d.stats()'); pg.wait_for_timeout(1200); s2 = pg.evaluate('window.__wmh3d.stats()')
     check('on-demand render: idle frames not rendered', s2['renders'] - s1['renders'] <= 1, f"{s1['renders']}→{s2['renders']}")
     print('stats merged', s2)
+    # 움직이는 동안에도 화면 갱신 한 번에 한 번만 그린다 — 루프가 겹치면 프레임마다 두 배로 불어난다.
+    # 소프트웨어 렌더러에서는 한 장이 느려 초당 횟수로는 드러나지 않으므로, 따로 센 화면 갱신 수와 비교한다
+    def rate(fn):
+        pg.evaluate("window.__fr = 0; window.__fon = true; (function f(){ if (window.__fon){ window.__fr++; requestAnimationFrame(f); } })()")
+        a = pg.evaluate('window.__wmh3d.stats().renders'); fn(); b = pg.evaluate('window.__wmh3d.stats().renders')
+        return pg.evaluate('window.__fon = false, window.__fr'), b - a
+    cv = pg.locator('#view3d canvas').bounding_box(); mx, my = cv['x'] + cv['width']/2, cv['y'] + cv['height']/2
+    def orbit_drag():
+        pg.mouse.move(mx, my); pg.mouse.down()
+        for i in range(20): pg.mouse.move(mx + i*8, my); pg.wait_for_timeout(30)
+        pg.mouse.up(); pg.wait_for_timeout(1500)
+    fr, n = rate(orbit_drag)
+    check('orbit drag renders at most once per frame', 0 < n <= fr + 2, f'{n} renders / {fr} frames')
 
     # 방 시점
     for rid, name in [('living', '거실'), ('kitchen', '주방'), ('master', '안방'), ('bath1', '공용욕실')]:
@@ -143,6 +156,12 @@ with sync_playwright() as p:
     pg.locator('#viewSeg [data-view="walk"]').click(); pg.wait_for_function(IN3D, timeout=25000); pg.wait_for_timeout(800)
     pg.locator('#walkOverlay').click(); pg.wait_for_timeout(600)
     check('walk fallback to joystick', pg.evaluate("getComputedStyle(document.querySelector('#joy')).display") == 'block')
+    fr, n = rate(lambda: pg.wait_for_timeout(1000))
+    check('walk: standing still renders nothing', n <= 1, f'{n} renders / {fr} frames')
+    def hold_w():
+        pg.keyboard.down('KeyW'); pg.wait_for_timeout(1200); pg.keyboard.up('KeyW'); pg.wait_for_timeout(200)
+    fr, n = rate(hold_w)
+    check('walk: moving renders at most once per frame', 0 < n <= fr + 2, f'{n} renders / {fr} frames')
     pg.screenshot(path=str(OUT / '14-walk.png'))
     pg.locator('#walkExit').click(); pg.wait_for_timeout(1200)
     check('walk exited → 3D tour', pg.locator('#viewSeg .btn.on').get_attribute('data-view') == '3d')

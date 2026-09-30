@@ -27,6 +27,7 @@ import { OX, OY, H, FOV, wx, wz, M, setOrigin } from './units';
 import { initMaterials, mat, floorMat, metal, setEnvIntensity, setWallColor, glassMat, wallMat, capMat, frameMat } from './materials';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { buildFurniture, type FurnLike } from './furniture';
+import { disposeGeo, geoCacheSize } from './prims';
 
 type Pose = {t: THREE.Vector3; p: THREE.Vector3};
 interface DoorState { pivot: THREE.Group; a0: number; a1: number; cur: number; open: boolean }
@@ -36,12 +37,16 @@ type Box2 = [number, number, number, number];   // 세계 좌표 x0, z0, x1, z1
 const MERGE = !new URLSearchParams(location.search).has('nomerge');   // ?nomerge = 합치기 전 그림 호출 수 비교용
 const stage = $('#stage'), host = $('#view3d');
 const SW = () => stage.clientWidth, SH = () => stage.clientHeight;
+// 캔버스 실제 픽셀 수를 약 420만(2560×1640)으로 묶는다: 레티나·5K 모니터의 큰 창에서 GPU가 칠할 픽셀이 4배로 늘지 않게
+const MAX_PIXELS = 4.2e6;
+const pixelRatio = () => Math.min(devicePixelRatio, Math.max(1, Math.min(2, Math.sqrt(MAX_PIXELS/Math.max(1, SW()*SH())))));
 const opt = {cut: false, furn: true, labels: true, night: false, hour: 11, mode: 'orbit' as 'orbit' | 'walk'};
 
 let inited = false, active = false, raf = 0, dirty = true, shadowDirty = true, renders = 0, why = '';
 let anim: {t0: number; dur: number; fn: (t: number) => void; res: () => void} | null = null;
 let fly: {t0: number; dur: number; A: Pose; B: Pose; f0: number; f1: number} | null = null;
 const ROOM_FOV = 70;   // 실내 사진처럼 넓은 화각
+const DAMP = .09;      // 카메라 관성: 60fps 기준 한 프레임에 남은 움직임의 9%를 쓰고 줄인다
 let renderer: THREE.WebGLRenderer, labelRenderer: CSS2DRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera;
 let ambient: THREE.AmbientLight;
 let orbit: OrbitControls, walkCtl: PointerLockControls, hemi: THREE.HemisphereLight, sun: THREE.DirectionalLight, ground: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial>;
@@ -54,8 +59,11 @@ let sway: {t0: number; dur: number; eye: THREE.Vector3; dir: THREE.Vector3} | nu
 const doors: DoorState[] = [], keys: Record<string, boolean> = {};
 const furnCache = new Map<string, {sig: string; obj: THREE.Group}>();
 
+// 다음 프레임 예약은 언제나 하나뿐이어야 한다. 루프 안(orbit.update의 'change', 걸어보기 이동)에서 부른
+// invalidate가 따로 예약하면 루프 끝의 예약과 겹쳐 프레임마다 루프가 두 배로 불어난다 — 루프 안에서는 표시만 하고 끝에서 한 번 예약
+let inLoop = false;
 const invalidate = () => { dirty = true; kick(); };
-const kick = () => { if (!raf && active) raf = requestAnimationFrame(loop); };
+const kick = () => { if (!raf && active && !inLoop) raf = requestAnimationFrame(loop); };
 
 /* ======================= 초기화 ======================= */
 function init(){
@@ -63,7 +71,7 @@ function init(){
   // WebGL을 못 쓰면 여기서 예외가 난다 — inited를 먼저 세우지 않아야 다음에 다시 시도할 수 있다
   const r = new THREE.WebGLRenderer({antialias: true});
   renderer = r;
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setPixelRatio(pixelRatio());
   renderer.setSize(SW(), SH());
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate = false;
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
@@ -76,7 +84,7 @@ function init(){
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(FOV, SW()/SH(), .05, 300);
   orbit = new OrbitControls(camera, renderer.domElement);
-  orbit.enableDamping = true; orbit.dampingFactor = .09;
+  orbit.enableDamping = true; orbit.dampingFactor = DAMP;
   setOverviewControls();
   // three r160 OrbitControls는 목표점을 매번 다시 정규화하면서 미세한 오차로 'change'를 끝없이 보낸다.
   // 그래서 실제로 카메라가 움직였을 때만 다시 그리게 한다
@@ -105,7 +113,7 @@ function init(){
   inited = true;
   bindPointer(renderer.domElement);
   new ResizeObserver(() => {
-    renderer.setSize(SW(), SH()); labelRenderer.setSize(SW(), SH());
+    renderer.setPixelRatio(pixelRatio()); renderer.setSize(SW(), SH()); labelRenderer.setSize(SW(), SH());
     camera.aspect = SW()/SH(); camera.updateProjectionMatrix(); invalidate();
   }).observe(stage);
   bindUI();
@@ -166,7 +174,7 @@ function bindPointer(cv: HTMLCanvasElement){
 }
 
 /* ======================= 건축 (바닥 · 벽 · 창 · 문) ======================= */
-function disposeTree(g: THREE.Object3D){ g.traverse(o => { if ((o as THREE.Mesh).geometry) (o as THREE.Mesh).geometry.dispose(); }); }
+function disposeTree(g: THREE.Object3D){ g.traverse(o => { const geo = (o as THREE.Mesh).geometry; if (geo) disposeGeo(geo); }); }
 function clearGroup(g: THREE.Object3D){ disposeTree(g); g.clear(); }
 const edgeMat = new THREE.LineBasicMaterial({color: 0x6f675b}), skirtMat = new THREE.MeshStandardMaterial({color: '#e9e4da', roughness: .6});
 const worldBox = (r: Rect): Box2 => [wx(r[0]), wz(r[1]), wx(r[2]), wz(r[3])];
@@ -271,12 +279,14 @@ function buildWindow(w: WinG, top: number){
 }
 
 // 천장 조명: 원판은 항상, 점광원은 야경일 때만 둔다 (낮에는 광원 수를 줄여 셰이더를 가볍게)
+const lampMat = new THREE.MeshStandardMaterial({color: '#fff', emissive: '#fff2d6', emissiveIntensity: .3});   // 원판은 모두 같은 재질
 function buildLamps(){
   clearGroup(lampG); lightG.clear();
+  lampMat.emissiveIntensity = opt.night ? 2 : .3;
   visibleRooms().filter(r => !r.service).forEach(r => {
     // 아래를 향한 원판: 실내에서 올려다볼 때만 보이고 위에서 내려다보면 보이지 않는다
     const disc = new THREE.CircleGeometry(.2, 32); disc.rotateX(Math.PI/2);
-    const lamp = new THREE.Mesh(disc, new THREE.MeshStandardMaterial({color: '#fff', emissive: '#fff2d6', emissiveIntensity: opt.night ? 2 : .3}));
+    const lamp = new THREE.Mesh(disc, lampMat);
     lamp.position.set(wx(r.at[0]), H - .004, wz(r.at[1])); lamp.visible = topH() >= H; lampG.add(lamp);
     if (opt.night){ const pl = new THREE.PointLight(0xffd9a8, grow > .99 ? 6 : 0, 7, 1.6); pl.position.set(wx(r.at[0]), H - .25, wz(r.at[1])); lightG.add(pl); }
   });
@@ -420,9 +430,15 @@ function camTween(A: Pose, B: Pose, e: number){
   camera.position.copy(tg).add(new THREE.Vector3().setFromSpherical(s)); camera.lookAt(tg); orbit.target.copy(tg);
 }
 function setPose(P: Pose){ camera.position.copy(P.p); orbit.target.copy(P.t); camera.lookAt(P.t); }
-const animate = (dur: number, fn: (t: number) => void) => new Promise<void>(res => { anim = {t0: performance.now(), dur, fn, res}; kick(); });
+// 드래그 뒤 남은 관성(회전·이동)을 버린다. 비행·전환 동안 멈춰 있던 관성이 도착한 뒤 이어져 카메라가 저절로 돌지 않게
+function stopInertia(){
+  const p = camera.position.clone(), q = camera.quaternion.clone(), tg = orbit.target.clone();
+  orbit.enableDamping = false; orbit.update(); orbit.enableDamping = true;   // 감쇠를 끄고 한 번 갱신하면 남은 관성이 0이 된다
+  camera.position.copy(p); camera.quaternion.copy(q); orbit.target.copy(tg);
+}
+const animate = (dur: number, fn: (t: number) => void) => new Promise<void>(res => { stopInertia(); anim = {t0: performance.now(), dur, fn, res}; kick(); });
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
-function flyTo(B: Pose, dur = 900, fov = FOV){ fly = {t0: performance.now(), dur, A: curPose(), B, f0: camera.fov, f1: fov}; kick(); }
+function flyTo(B: Pose, dur = 900, fov = FOV){ stopInertia(); fly = {t0: performance.now(), dur, A: curPose(), B, f0: camera.fov, f1: fov}; kick(); }
 function setFov(f: number){ if (Math.abs(camera.fov - f) > .01){ camera.fov = f; camera.updateProjectionMatrix(); } }
 
 function setOverviewControls(){
@@ -500,7 +516,7 @@ async function exit(){
   });
   stage.classList.remove('is3d');                    // 이 순간 3D는 수직 시점으로 평평해져 2D와 겹친 상태 — 이어서 페이드 아웃
   await wait(450);
-  active = false; cancelAnimationFrame(raf); raf = 0;
+  active = false; cancelAnimationFrame(raf); raf = 0; lastT = 0; sinceDraw = 99;
   stage.classList.remove('animating');
   grow = furnGrow = 1; applyGrow();
 }
@@ -712,10 +728,27 @@ function renderNow(){
   const key = `${camera.position.x.toFixed(2)},${camera.position.z.toFixed(2)},${d.x.toFixed(2)},${d.z.toFixed(2)}`;
   if (key !== lastCam){ lastCam = key; emitBus('camera', {x: camera.position.x*1000 + OX, y: camera.position.z*1000 + OY, dx: d.x, dy: d.z}); }
 }
-function loop(){
+// 고주사율 모니터(120·144·165Hz)에서는 화면 갱신 몇 번에 한 번만 그려 초당 60번 안팎으로 맞춘다.
+// 일정한 간격으로 건너뛰어야(165Hz → 3번마다 55fps, 144Hz → 2번마다 72fps) 움직임이 고르게 보인다
+let vsync = 1000/60, lastT = 0, sinceDraw = 99;
+function loop(t: number){
   raf = 0;
   if (!active) return;
-  const dt = Math.min(clock.getDelta(), .05), now = performance.now();
+  if (!lastT) clock.getDelta();                                 // 쉬다가 다시 시작: 쉰 시간을 움직임에 넣지 않는다
+  else vsync += (Math.min(t - lastT, 50) - vsync)*.1;           // 이어서 도는 동안 잰 화면 갱신 주기
+  lastT = t;
+  if (++sinceDraw < Math.max(1, Math.floor(1000/60/vsync + .35))){ raf = requestAnimationFrame(loop); return; }
+  sinceDraw = 0;
+  inLoop = true;
+  let again = false;
+  try { again = step(); }
+  finally { inLoop = false; }
+  if (again && active && !raf) raf = requestAnimationFrame(loop);
+  else if (!again){ lastT = 0; sinceDraw = 99; }
+}
+// 한 프레임: 움직이는 것을 진행하고 필요하면 그린다. 다음 프레임도 필요하면 true
+function step(): boolean {
+  const raw = clock.getDelta(), dt = Math.min(raw, .05), now = performance.now();
   let busy = false; why = '';
   if (anim){ const x = clamp01((now - anim.t0)/anim.dur); anim.fn(x); busy = true; why = 'anim'; if (x >= 1){ const r = anim.res; anim = null; r(); } }
   else if (fly){ const x = clamp01((now - fly.t0)/fly.dur), e = ease(x); setFov(fly.f0 + (fly.f1 - fly.f0)*e); camTween(fly.A, fly.B, e); busy = true; why = 'fly'; if (x >= 1) fly = null; }
@@ -725,16 +758,20 @@ function loop(){
     orbit.target.copy(sway.eye).addScaledVector(d, .12); camera.position.copy(sway.eye); camera.lookAt(orbit.target);
     busy = true; why = 'sway'; if (x >= 1) sway = null;
   }
-  else if (opt.mode === 'orbit'){ orbit.update(); if (camMoved()){ busy = true; why = 'orbit'; } }
-  else { stepWalk(dt); busy = walkCtl.isLocked || touchWalk; why = 'walk'; }
+  else if (opt.mode === 'orbit'){
+    // 관성은 시간 기준으로 줄인다: 프레임이 느린 컴퓨터에서도 60fps와 같은 시간(약 1.5초) 안에 멈춰 그리기를 끝낸다
+    orbit.dampingFactor = 1 - (1 - DAMP)**(Math.min(raw, .25)*60); orbit.update(); orbit.dampingFactor = DAMP;
+    if (camMoved()){ busy = true; why = 'orbit'; }
+  }
+  // 걸어보기: 제자리에 서 있으면 그리지 않는다. 움직이면 stepWalk가, 둘러보면 마우스·터치 입력이 invalidate
+  else { stepWalk(dt); if (dirty){ busy = true; why = 'walk'; } }
   for (const d of doors){
     const tg = d.open ? d.a1 : d.a0, diff = tg - d.cur;
     if (Math.abs(diff) > .0015){ d.cur += diff*Math.min(1, dt*6); d.pivot.rotation.y = d.cur; busy = true; shadowDirty = true; why += ' door'; }
   }
   if (!busy && dirty) why = 'dirty';
   if (busy || dirty){ dirty = false; renderNow(); }
-  if (busy || dirty) raf = requestAnimationFrame(loop);
-  else clock.getDelta();
+  return busy || dirty;
 }
 
 function shot(){
@@ -755,7 +792,7 @@ export function createView3D(){
     setMode: (m: 'orbit' | 'walk') => { if (active) setMode(m, false); },
     walking: () => active && opt.mode === 'walk',
     // 성능 측정용: 그림 호출 수·삼각형 수·지금까지 그린 횟수
-    stats: () => ({calls: renderer?.info.render.calls ?? 0, triangles: renderer?.info.render.triangles ?? 0, geometries: renderer?.info.memory.geometries ?? 0, renders, merged: MERGE, why}),
+    stats: () => ({calls: renderer?.info.render.calls ?? 0, triangles: renderer?.info.render.triangles ?? 0, geometries: renderer?.info.memory.geometries ?? 0, textures: renderer?.info.memory.textures ?? 0, programs: renderer?.info.programs?.length ?? 0, shapes: geoCacheSize(), renders, merged: MERGE, why}),
   };
   (window as unknown as {__wmh3d: typeof api}).__wmh3d = api;
   return api;

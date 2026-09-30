@@ -5,7 +5,7 @@ import type { Furniture } from '../core/state';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { M, wx, wz, H } from './units';
 import { mat, rng, darker, lighter, glassMat, frameMat, metal, chrome, blackMetal, mirror, ceramic, fabric, woodM, screenMat, glowMat } from './materials';
-import { sh, mesh, rot, box, rbox, cyl, lathe, rod, tube, blob, ring, shell, legs, pull, fronts, vase, tableLamp, plate } from './prims';
+import { sh, mesh, rot, disposeGeo, box, rbox, cyl, lathe, rod, tube, blob, ring, shell, legs, pull, fronts, vase, tableLamp, plate } from './prims';
 
 export type FurnLike = Pick<Furniture, 'type' | 'w' | 'd' | 'color' | 'cx' | 'cy' | 'rot'> & {id?: string};
 // upperGaps: 주방 상부장을 만들지 않을 구간(로컬 x, m) — 뒤쪽 벽에 창이 있는 곳
@@ -599,7 +599,8 @@ function mergeByMaterial(src: THREE.Group): THREE.Group {
     const m = obj as THREE.Mesh;
     if (!m.isMesh) return;
     if (Array.isArray(m.material)){ const c = m.clone(); c.applyMatrix4(m.matrixWorld); out.add(c); return; }
-    const geo = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
+    // clone()은 원래 클래스의 생성자를 다시 돌린다 (RoundedBoxGeometry는 기본 둥근 상자를 한 번 더 계산) — 일반 도형으로 복사
+    const geo = m.geometry.index ? m.geometry.toNonIndexed() : new THREE.BufferGeometry().copy(m.geometry);
     Object.keys(geo.attributes).forEach(k => { if (!KEEP_ATTRS.includes(k)) geo.deleteAttribute(k); });
     if (!geo.attributes.normal) geo.computeVertexNormals();
     if (!geo.attributes.uv) geo.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(geo.attributes.position.count*2), 2));
@@ -609,7 +610,7 @@ function mergeByMaterial(src: THREE.Group): THREE.Group {
     if (!b){ b = {mat: m.material, cast: m.castShadow, geos: []}; buckets.set(key, b); }
     b.geos.push(geo);
   });
-  src.traverse(obj => { const m = obj as THREE.Mesh; if (m.isMesh) m.geometry.dispose(); });
+  src.traverse(obj => { const m = obj as THREE.Mesh; if (m.isMesh) disposeGeo(m.geometry); });
   buckets.forEach(({mat, cast, geos}) => {
     const merged = mergeGeometries(geos, false);
     geos.forEach(g => g.dispose());

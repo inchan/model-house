@@ -8,17 +8,30 @@ type MatLike = string | THREE.Material;
 const asMat = (m: MatLike) => (typeof m === 'string' ? mat(m) : m);
 
 export const sh = <T extends THREE.Object3D>(o: T) => { o.castShadow = o.receiveShadow = true; return o; };
+// 같은 치수의 도형은 한 번만 계산해 나눠 쓴다. 가구는 합칠 때 도형을 복사하므로 원본을 공유해도 안전하다.
+// 둥근 상자는 만들기가 비싸서, 스타일을 바꿀 때 붙박이장·가구를 다시 만드는 시간 대부분이 여기서 나온다
+const geoCache = new Map<string, THREE.BufferGeometry>();
+function cachedGeo(key: string, make: () => THREE.BufferGeometry){
+  let g = geoCache.get(key);
+  if (!g){ if (geoCache.size > 4000) geoCache.clear(); g = make(); g.userData.shared = true; geoCache.set(key, g); }
+  return g;
+}
+export const geoCacheSize = () => geoCache.size;
+// 공유 도형은 쓰는 쪽에서 버리지 않는다 (?nomerge에서는 여러 메시가 같은 도형을 그린다)
+export const disposeGeo = (g: THREE.BufferGeometry) => { if (!g.userData.shared) g.dispose(); };
+const gk = (kind: string, ...v: number[]) => kind + v.map(x => Math.round(x*1e5)).join(',');
 export const mesh = (geo: THREE.BufferGeometry, m: MatLike) => sh(new THREE.Mesh(geo, asMat(m)));
 export const rot = <T extends THREE.Object3D>(o: T, x = 0, y = 0, z = 0) => { o.rotation.set(x, y, z); return o; };
 
 export function box(w: number, h: number, d: number, m: MatLike, x = 0, y = 0, z = 0){
-  const o = mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y + h/2, z); return o;
+  const o = mesh(cachedGeo(gk('b', w, h, d), () => new THREE.BoxGeometry(w, h, d)), m); o.position.set(x, y + h/2, z); return o;
 }
 export function rbox(w: number, h: number, d: number, m: MatLike, x = 0, y = 0, z = 0, r = .04){
-  const o = mesh(new RoundedBoxGeometry(w, h, d, 3, Math.min(r, w/2-.001, h/2-.001, d/2-.001)), m); o.position.set(x, y + h/2, z); return o;
+  const rr = Math.min(r, w/2-.001, h/2-.001, d/2-.001);
+  const o = mesh(cachedGeo(gk('r', w, h, d, rr), () => new RoundedBoxGeometry(w, h, d, 3, rr)), m); o.position.set(x, y + h/2, z); return o;
 }
 export function cyl(rt: number, rb: number, h: number, m: MatLike, x = 0, y = 0, z = 0, seg = 28){
-  const o = mesh(new THREE.CylinderGeometry(rt, rb, h, seg), m); o.position.set(x, y + h/2, z); return o;
+  const o = mesh(cachedGeo(gk('c', rt, rb, h, seg), () => new THREE.CylinderGeometry(rt, rb, h, seg)), m); o.position.set(x, y + h/2, z); return o;
 }
 // 회전체: pts = [[반지름, 높이], …] 아래에서 위로, y = 바닥면
 export function lathe(pts: [number, number][], m: MatLike, x = 0, y = 0, z = 0, seg = 40){
@@ -34,7 +47,7 @@ export const tube = (pts: Vec3[], r: number, m: MatLike, seg = 40) =>
   mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(...p)), false, 'centripetal'), seg, r, 10), m);
 // 타원체 (쿠션, 잎, 빈백), y = 중심
 export function blob(rx: number, ry: number, rz: number, m: MatLike, x = 0, y = 0, z = 0, seg = 24){
-  const o = mesh(new THREE.SphereGeometry(1, seg, Math.round(seg*.7)), m); o.scale.set(rx, ry, rz); o.position.set(x, y, z); return o;
+  const o = mesh(cachedGeo(gk('s', seg), () => new THREE.SphereGeometry(1, seg, Math.round(seg*.7))), m); o.scale.set(rx, ry, rz); o.position.set(x, y, z); return o;
 }
 // 수평 고리, y = 중심
 export function ring(R: number, r: number, m: MatLike, x = 0, y = 0, z = 0){
