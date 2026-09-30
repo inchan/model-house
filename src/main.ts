@@ -19,6 +19,8 @@ import { renderStageInfo, renderRoomTabs, renderMinimap, bindStageTools, renderF
 import { bindSide, renderSide, followSelection } from './ui/side';
 import { renderEstimateBar } from './ui/estimate';
 import { openLanding } from './ui/landing';
+import { editor, render as renderEditor, setEditorListener, setPreviewListener } from './plan2d/editor';
+import { startEditing, stopEditing } from './ui/editmode';
 
 let lastType = state.type;
 function renderAll(){
@@ -26,6 +28,8 @@ function renderAll(){
   $<HTMLButtonElement>('#undo').disabled = !undoStack.length;
   $<HTMLButtonElement>('#redo').disabled = !redoStack.length;
   get3D()?.sync();
+  if (editor.on && state.type !== 'custom') stopEditing();   // 실행 취소로 내 평면 이전으로 돌아간 경우
+  renderEditor();
   if (state.type !== lastType){
     lastType = state.type; resetRoomTab(); fitView();
     if (is3D()) get3D()?.flyOverview();
@@ -47,6 +51,11 @@ applyStaticLang(); syncLangBtn(); syncFullscreen();
 const enterModelHouse = () => { setView('3d'); };
 bindTopbar(relang, () => openLanding(true, () => { if (!is3D()) enterModelHouse(); }));
 bindKeyboard(); bindPlanPointer(); bindLibDrag(); bindStageTools(); bindSide();
+// 평면 편집기: 편집 결과는 패널·편집 표시를 다시 그리고, 끄는 중에는 평면만 미리 보기
+setEditorListener(() => { renderSide(); renderEditor(); });
+setPreviewListener(() => { renderPlan(); renderEditor(); });
+$('#edPlan').onclick = () => { if (editor.on) stopEditing(); else startEditing(); };
+$('#viewSeg').addEventListener('click', () => stopEditing(), true);   // 3D로 가면 편집을 마친다
 buildDefs();
 
 // 캔버스 크기가 0에서 처음 잡힐 때는 화면에 맞추고, 그 밖의 변화(패널 접기 등)에서는 화면 가운데를 유지한다

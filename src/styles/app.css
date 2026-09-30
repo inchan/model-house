@@ -228,6 +228,8 @@ main.animating #hint3d{opacity:0}
 .form input[type=color]{padding:2px;height:32px}
 .actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .actions .btn{border:1px solid var(--line);background:#fff;font-size:13px;padding:6px 10px}
+.actions .btn.primary{background:var(--green);border-color:var(--green);color:#fff}
+.actions .btn.on{background:var(--green-100);border-color:var(--green);color:var(--green)}
 .actions .btn svg{width:15px;height:15px}
 table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 td,th{padding:6px 2px;border-bottom:1px dashed #ebe4d6;font-size:13px;text-align:left;font-weight:400}
@@ -279,6 +281,29 @@ tr.click:hover td{background:#faf6ee}
 .tcard .go svg{width:18px;height:18px}
 .tcard.cur{border-color:var(--green)}
 .land .foot{margin-top:28px;font-size:12px;color:var(--muted);text-align:center}
+.ccard{margin-top:18px;display:grid;grid-template-columns:52px 1fr auto;gap:16px;align-items:center;padding:18px 20px;background:var(--card);border:1px dashed var(--line-strong);border-radius:18px}
+.ccard .ic{width:52px;height:52px;border-radius:14px;background:var(--green-50);color:var(--green);display:grid;place-items:center}
+.ccard b{font-size:17px}
+.ccard p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.ccard .acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+
+/* ---------- 평면 편집기 ---------- */
+body:not(.editing) #gEdit{display:none}
+body.editing .hide-editing,body.editing #roomTabs,body.editing .side-tabs{display:none!important}
+body.editing #gFurn{opacity:.22;pointer-events:none}
+body.editing #gFix{opacity:.3}
+body.editing #gLabels{opacity:.75}
+#plan.ed-draw{cursor:crosshair}
+.edtools{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.edtools .btn{border:1px solid var(--line);background:#fff;flex-direction:column;gap:3px;padding:10px 4px;font-size:12px}
+.edtools .btn svg{width:20px;height:20px}
+.edtools .btn.on{background:var(--green);color:#fff;border-color:var(--green)}
+.edrooms{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.edroom{display:flex;flex-direction:column;align-items:flex-start;border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 10px;cursor:pointer;text-align:left}
+.edroom b{font-size:13px}
+.edroom small{font-size:11px;color:var(--muted)}
+.edroom.on{border-color:var(--green);box-shadow:0 0 0 2px var(--green-50)}
+.form select{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:#fff;width:100%}
 
 /* ---------- 견적 요약 ---------- */
 .modal{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:rgba(20,26,22,.42);padding:20px;animation:fadeIn .2s ease}
@@ -333,6 +358,7 @@ tr.click:hover td{background:#faf6ee}
   .float-tools{top:60px}
   .stage-info span:not(:first-of-type),.stage-info i{display:none}
   .cards{grid-template-columns:1fr}
+  .ccard{grid-template-columns:1fr}
   #estimateBar{gap:10px;padding:0 10px}
   #estimateBar .total b{font-size:17px}
 }

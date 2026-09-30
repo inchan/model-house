@@ -1,6 +1,7 @@
 /* 지금 상태(타입 + 옵션)에 해당하는 평면 형상과 그로부터 계산되는 값들 */
 import { state } from './state';
-import { TYPES, getPlan } from '../data/apt';
+import { getPlan } from '../data/apt';
+import { resolveType } from '../data/apt/custom';
 import type { RoomSpec } from '../data/apt/schema';
 import type { RoomG } from '../data/apt/builder';
 import { MATS, WASTE, type MatKey } from '../data/materials';
@@ -8,8 +9,8 @@ import { OPTION_ORDER } from '../data/options';
 import { WALLPAPERS } from '../data/styles';
 import type { OptionId } from '../data/apt/schema';
 
-export const plan = () => getPlan(state.type, state.opts);
-export const aptType = () => TYPES[state.type];
+export const aptType = () => resolveType(state.type, state.custom);
+export const plan = () => getPlan(aptType(), state.opts);
 export const roomSpec = (id: string): RoomSpec | undefined => aptType().rooms.find(r => r.id === id);
 export const roomG = (id: string): RoomG | undefined => plan().rooms.find(r => r.id === id);
 // 합쳐진 공간(확장 발코니 등)은 대상 방을 따른다

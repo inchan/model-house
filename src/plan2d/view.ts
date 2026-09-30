@@ -12,7 +12,10 @@ export function applyView(){
   $('#sbBar').style.width = nice*view.s + 'px';
   $('#sbText').textContent = `${nice >= 1000 ? `${nice/1000} m` : `${nice} mm`} · 1:${Math.round(1/(view.s*PX_MM))}`;
   renderSel(); renderMeasure();
+  viewHooks.forEach(fn => fn());
 }
+// 뷰가 바뀔 때 함께 다시 그릴 것들 (편집기 손잡이 등)
+export const viewHooks: (() => void)[] = [];
 // 화면 맞춤: 위쪽 정보·도구 막대와 아래 방 탭을 피한 영역 가운데에 평면을 둔다
 const INSET = {top: 118, bottom: 72, side: 16};
 export function fitView(){

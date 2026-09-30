@@ -23,10 +23,12 @@ export function renderStageInfo(){
 
 /* ---------- 방 탭: 모델하우스처럼 방마다 정해 둔 시점으로 이동 ---------- */
 const ROOM_ORDER = ['living', 'kitchen', 'master', 'bed2', 'bed3', 'alpha', 'pantry', 'dress', 'bath1', 'bath2', 'entry', 'utility'];
+const KIND_ORDER = ['living', 'kitchen', 'master', 'bed', 'alpha', 'dress', 'bath', 'entry', 'utility', 'balcony', 'hall'];
 let activeRoom: string | null = null;
 export function renderRoomTabs(){
-  const vis = new Set(visibleRooms().map(r => r.id));
-  const ids = ROOM_ORDER.filter(id => vis.has(id));
+  const vis = visibleRooms().filter(r => r.kind !== 'hall' && (!r.service || r.kind === 'utility'));
+  // 분양 타입은 정해 둔 순서, 내 평면처럼 모르는 id는 그 뒤에 (종류 순)
+  const ids = [...ROOM_ORDER.filter(id => vis.some(r => r.id === id)), ...vis.filter(r => !ROOM_ORDER.includes(r.id)).sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind)).map(r => r.id)];
   $('#roomTabs').innerHTML = `<button data-room="__all" class="${activeRoom ? '' : 'on'}">${t('tabs.all')}</button><span class="sep"></span>`
     + ids.map(id => `<button data-room="${id}" class="${activeRoom === id ? 'on' : ''}">${esc(roomName(id))}</button>`).join('');
   $$('#roomTabs button').forEach(b => b.onclick = () => goRoom(b.dataset.room === '__all' ? null : b.dataset.room!));

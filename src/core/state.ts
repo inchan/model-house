@@ -1,8 +1,9 @@
 /* ======================= 상태 / 기록 / 저장 =======================
  * 앱 상태 = 지금 보고 있는 타입 + 스타일 + 벽지 + 유상옵션 + 그 타입의 가구·바닥재·측정선.
  * 다른 타입의 배치는 stash에 보관해 두었다가 타입을 바꾸면 되살린다 */
-import { TYPES, TYPE_IDS, isTypeId } from '../data/apt';
-import type { ColorRole, OptionId, TypeId } from '../data/apt/schema';
+import { isTypeId } from '../data/apt';
+import { resolveType, sanitizeCustom, type CustomPlan } from '../data/apt/custom';
+import type { AptType, ColorRole, OptionId, TypeId } from '../data/apt/schema';
 import { isMatKey, type MatKey } from '../data/materials';
 import { STYLES, isStyleId, isWallpaperId, type StyleId, type WallpaperId } from '../data/styles';
 import { DEFAULT_OPTS, isOptionId } from '../data/options';
@@ -20,6 +21,7 @@ export type OptState = Partial<Record<OptionId, boolean>>;
 export interface AppState extends TypeState {
   v: 3; type: TypeId; style: StyleId; wall: WallpaperId; opts: OptState;
   stash: Partial<Record<TypeId, TypeState>>;
+  custom?: CustomPlan;                  // 편집기로 그린 "내 평면"
 }
 export type Sel = { kind: 'furn' | 'room'; id: string } | null;
 export type Tool = 'select' | 'measure';
@@ -33,22 +35,22 @@ export const F = (type: FurnType, key: string, cx: number, cy: number, w: number
   ({id: uid(), type, key, cx, cy, w, d, rot, color: color || typeColor(type), ...(role ? {role} : {})});
 
 // 스타일을 적용한 바닥재: 스타일에 공간 종류별 지정이 있으면 그것, 없으면 분양 기본 사양
-export function styledRooms(type: TypeId, style: StyleId, prev?: Record<string, RoomState>): Record<string, RoomState> {
+export function styledRooms(type: AptType, style: StyleId, prev?: Record<string, RoomState>): Record<string, RoomState> {
   const out: Record<string, RoomState> = {};
-  TYPES[type].rooms.forEach(r => {
+  type.rooms.forEach(r => {
     const mat = STYLES[style].floors[r.kind] ?? r.mat, name = prev?.[r.id]?.name;
     out[r.id] = name ? {name, mat} : {mat};
   });
   return out;
 }
 export const roleColor = (style: StyleId, role: ColorRole | undefined, type: FurnType) => (role ? STYLES[style].colors[role] : typeColor(type));
-export function stagedFurniture(type: TypeId, style: StyleId): Furniture[] {
-  return TYPES[type].furniture.map(s => F(s.type, s.key, s.cx, s.cy, s.w, s.d, s.rot ?? 0, roleColor(style, s.role, s.type), s.role));
+export function stagedFurniture(type: AptType, style: StyleId): Furniture[] {
+  return type.furniture.map(s => F(s.type, s.key, s.cx, s.cy, s.w, s.d, s.rot ?? 0, roleColor(style, s.role, s.type), s.role));
 }
-export const defaultTypeState = (type: TypeId, style: StyleId): TypeState => ({furniture: stagedFurniture(type, style), rooms: styledRooms(type, style), measures: []});
+export const defaultTypeState = (type: AptType, style: StyleId): TypeState => ({furniture: stagedFurniture(type, style), rooms: styledRooms(type, style), measures: []});
 
 export function defaultState(type: TypeId = 'a84', style: StyleId = 'natural'): AppState {
-  return {v: 3, type, style, wall: STYLES[style].wall, opts: {...DEFAULT_OPTS}, stash: {}, ...defaultTypeState(type, style)};
+  return {v: 3, type, style, wall: STYLES[style].wall, opts: {...DEFAULT_OPTS}, stash: {}, ...defaultTypeState(resolveType(type), style)};
 }
 
 /* 저장·불러오기 데이터 검증: 알 수 없는 값은 버리거나 기본값으로 바꾼다.
@@ -59,7 +61,7 @@ const asObj = (v: unknown) => (v && typeof v === 'object' && !Array.isArray(v) ?
 const asName = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, 60) : undefined);
 const isPt = (p: unknown): p is Pt => isNum(asObj(p).x) && isNum(asObj(p).y);
 
-function sanitizeTypeState(type: TypeId, raw: unknown, ids: Set<string>): {ts: TypeState; skipped: number} {
+function sanitizeTypeState(type: AptType, raw: unknown, ids: Set<string>): {ts: TypeState; skipped: number} {
   const r = asObj(raw);
   let skipped = 0;
   const furniture: Furniture[] = [];
@@ -78,7 +80,7 @@ function sanitizeTypeState(type: TypeId, raw: unknown, ids: Set<string>): {ts: T
       ...(isRole(o.role) ? {role: o.role} : {})});
   }
   const src = asObj(r.rooms), rooms: Record<string, RoomState> = {};
-  TYPES[type].rooms.forEach(room => {
+  type.rooms.forEach(room => {
     const s = asObj(src[room.id]), name = asName(s.name), mat = isMatKey(s.mat) ? s.mat : room.mat;
     rooms[room.id] = name ? {name, mat} : {mat};
   });
@@ -90,15 +92,21 @@ function sanitizeTypeState(type: TypeId, raw: unknown, ids: Set<string>): {ts: T
 export function sanitizeState(raw: unknown): {state: AppState; skipped: number} | null {
   const r = asObj(raw);
   if (r.v !== 3 || !Array.isArray(r.furniture)) return null;
-  const type = isTypeId(r.type) ? r.type : 'a84', style = isStyleId(r.style) ? r.style : 'natural';
+  const custom = sanitizeCustom(r.custom);
+  let type = isTypeId(r.type) ? r.type : 'a84';
+  if (type === 'custom' && !custom) type = 'a84';
+  const style = isStyleId(r.style) ? r.style : 'natural';
   const opts: OptState = {};
   Object.entries(asObj(r.opts)).forEach(([k, v]) => { if (isOptionId(k) && typeof v === 'boolean') opts[k] = v; });
   const ids = new Set<string>();
-  const cur = sanitizeTypeState(type, r, ids);
+  const cur = sanitizeTypeState(resolveType(type, custom), r, ids);
   let skipped = cur.skipped;
   const stash: Partial<Record<TypeId, TypeState>> = {}, rs = asObj(r.stash);
-  TYPE_IDS.forEach(id => { if (id !== type && rs[id]){ const s = sanitizeTypeState(id, rs[id], ids); stash[id] = s.ts; skipped += s.skipped; } });
-  return {state: {v: 3, type, style, wall: isWallpaperId(r.wall) ? r.wall : STYLES[style].wall, opts, stash, ...cur.ts}, skipped};
+  (['a59', 'a84', 'b84', 'custom'] as TypeId[]).forEach(id => {
+    if (id === type || !rs[id] || (id === 'custom' && !custom)) return;
+    const s = sanitizeTypeState(resolveType(id, custom), rs[id], ids); stash[id] = s.ts; skipped += s.skipped;
+  });
+  return {state: {v: 3, type, style, wall: isWallpaperId(r.wall) ? r.wall : STYLES[style].wall, opts, stash, ...(custom ? {custom} : {}), ...cur.ts}, skipped};
 }
 
 const STORE = 'wmh:state-v3';

@@ -1,5 +1,7 @@
 /* ======================= 편집 동작 ======================= */
 import { state, ui, mutate, getF, uid, F, undo, defaultTypeState, styledRooms, stagedFurniture } from './state';
+import { aptType } from './plan';
+import { resolveType } from '../data/apt/custom';
 import { norm } from './geometry';
 import { libName } from './names';
 import type { OptionId, TypeId } from '../data/apt/schema';
@@ -63,7 +65,7 @@ export function applyStyle(id: StyleId){
   if (id === state.style) return;
   mutate(() => {
     state.style = id; state.wall = STYLES[id].wall;
-    state.rooms = styledRooms(state.type, id, state.rooms);
+    state.rooms = styledRooms(aptType(), id, state.rooms);
     state.furniture.forEach(f => { if (f.role) f.color = STYLES[id].colors[f.role]; });
   });
   toast(t('toast.styleApplied', {name: tKey('style.' + id)}));
@@ -78,7 +80,7 @@ export function switchType(id: TypeId){
   ui.sel = null; ui.mA = ui.mCur = null;
   mutate(() => {
     state.stash[state.type] = {furniture: state.furniture, rooms: state.rooms, measures: state.measures};
-    const next = state.stash[id] ?? defaultTypeState(id, state.style);
+    const next = state.stash[id] ?? defaultTypeState(resolveType(id, state.custom), state.style);
     delete state.stash[id];
     state.type = id; state.furniture = next.furniture; state.rooms = next.rooms; state.measures = next.measures;
   });
@@ -87,5 +89,5 @@ export function switchType(id: TypeId){
 // 지금 타입을 현재 스타일의 기본 연출로 되돌린다 (옵션·스타일은 유지)
 export function restage(){
   ui.sel = null;
-  mutate(() => { state.furniture = stagedFurniture(state.type, state.style); state.rooms = styledRooms(state.type, state.style); state.measures = []; });
+  mutate(() => { state.furniture = stagedFurniture(aptType(), state.style); state.rooms = styledRooms(aptType(), state.style); state.measures = []; });
 }

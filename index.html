@@ -58,6 +58,7 @@
       <g id="gDims" pointer-events="none"></g>
       <g id="gMeasure" pointer-events="none"></g>
       <g id="gSel"></g>
+      <g id="gEdit"></g>
     </svg>
     <div id="view3d">
       <div id="walkOverlay"><div class="card"><h3 data-i18n="v3d.walkTitle"></h3>
@@ -73,10 +74,13 @@
     <div class="stage-info" id="stageInfo"></div>
     <div class="float-tools only2d" id="tools2d">
       <div class="grp">
+        <button class="btn primary" id="edPlan" data-i18n-title="tb.editPlanTitle" data-icon="edit"><span data-i18n="tb.editPlan"></span></button>
+      </div>
+      <div class="grp hide-editing">
         <button class="btn on" data-tool="select" data-i18n-title="tb.selectTitle" data-icon="select"><span data-i18n="tb.select"></span></button>
         <button class="btn" data-tool="measure" data-i18n-title="tb.measureTitle" data-icon="measure"><span data-i18n="tb.measure"></span></button>
       </div>
-      <div class="grp" id="layers">
+      <div class="grp hide-editing" id="layers">
         <button class="btn chip on" data-layer="dims" data-i18n="tb.layerDims"></button>
         <button class="btn chip on" data-layer="labels" data-i18n="tb.layerRooms"></button>
         <button class="btn chip on" data-layer="furn" data-i18n="tb.layerFurn"></button>

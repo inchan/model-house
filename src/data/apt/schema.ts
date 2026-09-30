@@ -9,7 +9,8 @@ import type { FurnType } from '../library';
 
 export type Pt2 = [number, number];
 export type Rect = [number, number, number, number];
-export type TypeId = 'a59' | 'a84' | 'b84';
+export type PresetId = 'a59' | 'a84' | 'b84';
+export type TypeId = PresetId | 'custom';        // custom = 편집기로 그린 "내 평면"
 // b = 내력벽·세대간벽(콘크리트) · e = 외벽 · n = 비내력 경량벽 · low = 낮은 벽
 export type WallKind = 'b' | 'e' | 'n' | 'low';
 
@@ -69,4 +70,5 @@ export interface AptType {
   price: Partial<Record<OptionId, number>>;   // 옵션 추가금(원, 참고 예시)
   sysacUnits?: number;                 // 시스템에어컨 대수
   tags: string[];                      // 특징 태그 사전 키 (tag.*)
+  sig?: string;                        // 평면 계산 캐시 구분값 (내 평면은 내용이 바뀔 때마다 달라진다)
 }

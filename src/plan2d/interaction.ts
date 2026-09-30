@@ -8,6 +8,7 @@ import { svg, toMM } from './svg';
 import { applyView, clampScale, zoomAt } from './view';
 import { snapMove, snapPoint } from './snap';
 import { renderFurn, renderSel, renderMeasure } from './render';
+import { editor, edPointerDown, edPointerMove, edPointerUp, edDoubleClick } from './editor';
 
 type Drag =
   | {kind: 'measure'; sx: number; sy: number; moved: boolean}
@@ -56,6 +57,7 @@ export function bindPlanPointer(){
       }
     }
     if (pinch) return;
+    if (edPointerDown(e)) return;
     const p = toMM(e), target = e.target as Element;
     if (ui.tool === 'measure'){
       const q = snapPoint(p, e.shiftKey);
@@ -85,6 +87,7 @@ export function bindPlanPointer(){
       view.s = ns; view.x0 = pinch.px - c[0]/ns; view.y0 = pinch.py - c[1]/ns; applyView();
       return;
     }
+    if (edPointerMove(e)) return;
     const p = toMM(e);
     if (!drag){
       if (ui.tool === 'measure' && ui.mA){ ui.mCur = snapPoint(p, e.shiftKey); renderMeasure(); }
@@ -122,6 +125,7 @@ export function bindPlanPointer(){
   const onEnd = (e: PointerEvent) => {
     touches.delete(e.pointerId);
     if (pinch){ if (touches.size < 2) pinch = null; return; }   // 두 손가락이 끝난 뒤 남은 손가락은 아무 동작도 하지 않는다
+    if (edPointerUp()) return;
     endDrag(e.type === 'pointercancel');
   };
   svg.addEventListener('pointerup', onEnd);
@@ -134,6 +138,6 @@ export function bindPlanPointer(){
     const r = svg.getBoundingClientRect();
     zoomAt(view.s*Math.exp(-e.deltaY*(e.ctrlKey ? .01 : .0015)), e.clientX-r.left, e.clientY-r.top);
   }, {passive: false});
-  svg.addEventListener('dblclick', e => { if (ui.tool === 'select' && (e.target as Element).closest('[data-fid]')) rotateSel(90); });
-  svg.addEventListener('contextmenu', e => { if (ui.tool === 'measure'){ e.preventDefault(); ui.mA = null; renderMeasure(); } });
+  svg.addEventListener('dblclick', e => { if (edDoubleClick()) return; if (ui.tool === 'select' && (e.target as Element).closest('[data-fid]')) rotateSel(90); });
+  svg.addEventListener('contextmenu', e => { if (editor.on || ui.tool === 'measure'){ e.preventDefault(); ui.mA = null; renderMeasure(); } });
 }

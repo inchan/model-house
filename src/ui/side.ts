@@ -13,6 +13,9 @@ import type { OptionId } from '../data/apt/schema';
 import { t, fmtKRW, type Key } from '../i18n';
 import { icon, type IconName } from './icons';
 import { buildLibInto } from './library';
+import { editor } from '../plan2d/editor';
+import { renderEditPanel } from './editpanel';
+import { stopEditing, resetBlank, startEditing } from './editmode';
 import { toast } from './toast';
 
 type Tab = 'options' | 'style' | 'furniture';
@@ -35,6 +38,7 @@ export function followSelection(){
 export function renderSide(){
   $$('.side-tabs .tab').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   const el = $('#sidePanel');
+  if (editor.on){ renderEditPanel(el, stopEditing, resetBlank); return; }
   if (tab === 'options'){ el.innerHTML = optionsTab(); bindOptions(); }
   else if (tab === 'style'){ el.innerHTML = styleTab(); bindStyle(); }
   else { el.innerHTML = furnitureTab(); bindFurniture(); }
@@ -45,7 +49,7 @@ const OPT_ICON: Record<OptionId, IconName> = {ext: 'layers', sysac: 'ac', builti
 const priceText = (p: number) => (p ? fmtKRW(p) : t('opt.free'));
 function optionsTab(){
   const a = aptType(), est = estimate();
-  const extGain = getPlan(a.id, {...state.opts, ext: true}).usable - getPlan(a.id, {...state.opts, ext: true}).exclusive;
+  const pe = getPlan(a, {...state.opts, ext: true}), extGain = pe.usable - pe.exclusive;
   const desc = (id: OptionId) => t(`opt.${id}.desc` as Key, {a: fmtArea(extGain, 1), n: a.sysacUnits ?? 0});
   const cards = OPTION_ORDER.filter(id => a.options.includes(id)).map(id => {
     const on = !!state.opts[id];
@@ -54,11 +58,14 @@ function optionsTab(){
       <span><b>${optName(id)}</b><p>${esc(desc(id))}</p></span>
       <span class="price">${priceText(a.price[id] ?? 0)}<span class="switch"></span></span></button>`;
   }).join('');
+  if (a.id === 'custom') return `<div class="sec"><div class="sec-h"><h3>${t('opt.header')}</h3></div>
+    <p class="note">${t('opt.customNote')}</p><div class="actions"><button class="btn primary" id="optEdit">${icon('edit')}${t('tb.editPlan')}</button></div></div>`;
   return `<div class="sec"><div class="sec-h"><h3>${t('opt.header')}</h3><small>${t('opt.selected', {n: est.options.length, sum: fmtKRW(est.optionSum)})}</small></div>
     <p class="note" style="margin:-4px 0 12px">${t('opt.sub')}</p>${cards}
     <p class="note">${t('sum.note')}</p></div>`;
 }
 function bindOptions(){
+  document.getElementById('optEdit')?.addEventListener('click', () => startEditing());
   $$('#sidePanel [data-opt]').forEach(b => b.onclick = () => {
     const id = b.dataset.opt as OptionId, on = !state.opts[id], price = aptType().price[id] ?? 0;
     setOption(id, on);

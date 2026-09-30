@@ -15,7 +15,8 @@ export const syncLangBtn = () => { $('#langBtn span').textContent = lang === 'ko
 
 export function renderTypeSeg(){
   $('#typeSeg').innerHTML = TYPE_IDS.map(id =>
-    `<button class="btn ${state.type === id ? 'on' : ''}" data-type="${id}" role="tab" aria-selected="${state.type === id}">${typeCode(id)}<span class="sub">${t('spec.pyeong', {p: pyeong(TYPES[id].supply)})}</span></button>`).join('');
+    `<button class="btn ${state.type === id ? 'on' : ''}" data-type="${id}" role="tab" aria-selected="${state.type === id}">${typeCode(id)}<span class="sub">${t('spec.pyeong', {p: pyeong(TYPES[id].supply)})}</span></button>`).join('')
+    + (state.custom ? `<button class="btn ${state.type === 'custom' ? 'on' : ''}" data-type="custom" role="tab" aria-selected="${state.type === 'custom'}">${t('type.custom')}</button>` : '');
   $$('#typeSeg .btn').forEach(b => b.onclick = () => switchType(b.dataset.type as TypeId));
 }
 
