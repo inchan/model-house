@@ -25,3 +25,7 @@ tmp/
 .env
 .env.*
 audit.txt
+
+# e2e 스크린샷
+tests/e2e/shots/
+__pycache__/

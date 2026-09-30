@@ -14,6 +14,7 @@ import { icon } from './icons';
 import { is3D, get3D } from './mode';
 import { onBus } from './bus';
 import { openSideTab } from './side';
+import { toggleTour, touring, stopTour } from './tour';
 
 export function renderStageInfo(){
   const a = aptType(), p = plan();
@@ -29,13 +30,15 @@ export function renderRoomTabs(){
   const vis = visibleRooms().filter(r => r.kind !== 'hall' && (!r.service || r.kind === 'utility'));
   // 분양 타입은 정해 둔 순서, 내 평면처럼 모르는 id는 그 뒤에 (종류 순)
   const ids = [...ROOM_ORDER.filter(id => vis.some(r => r.id === id)), ...vis.filter(r => !ROOM_ORDER.includes(r.id)).sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind)).map(r => r.id)];
-  $('#roomTabs').innerHTML = `<button data-room="__all" class="${activeRoom ? '' : 'on'}">${t('tabs.all')}</button><span class="sep"></span>`
+  $('#roomTabs').innerHTML = `<button id="tourBtn" class="tour-btn only3d">${icon('eye')}${t('tour.start')}</button><span class="sep only3d"></span>`
+    + `<button data-room="__all" class="${activeRoom ? '' : 'on'}">${t('tabs.all')}</button><span class="sep"></span>`
     + ids.map(id => `<button data-room="${id}" class="${activeRoom === id ? 'on' : ''}">${esc(roomName(id))}</button>`).join('');
-  $$('#roomTabs button').forEach(b => b.onclick = () => goRoom(b.dataset.room === '__all' ? null : b.dataset.room!));
+  $$('#roomTabs button[data-room]').forEach(b => b.onclick = () => { if (touring()) stopTour(); goRoom(b.dataset.room === '__all' ? null : b.dataset.room!); });
+  $('#tourBtn').onclick = toggleTour;
 }
 function setActiveRoom(id: string | null){
   activeRoom = id;
-  $$('#roomTabs button').forEach(b => b.classList.toggle('on', (b.dataset.room === '__all' ? null : b.dataset.room) === id));
+  $$('#roomTabs button[data-room]').forEach(b => b.classList.toggle('on', (b.dataset.room === '__all' ? null : b.dataset.room) === id));
   $$('#minimap .mm-room').forEach(p => p.classList.toggle('on', p.getAttribute('data-room') === id));
 }
 onBus('roomView', setActiveRoom);

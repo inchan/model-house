@@ -49,6 +49,8 @@ let archFloor: THREE.Group, archUp: THREE.Group, fixG: THREE.Group, ceilG: THREE
 let wallCol: Box2[] = [], fixCol: Box2[] = [], furnCol: Box2[] = [];
 let selKey: string | null = null, selHelper: THREE.BoxHelper | null = null, roomView: string | null = null;
 let sigArch = '', sigFix = '', sigLabels = '', sigLamps = '', origin = '', grow = 1, furnGrow = 1, touchWalk = false;
+// 투어: 방 시점에 선 채로 고개를 천천히 좌우로 돌린다
+let sway: {t0: number; dur: number; eye: THREE.Vector3; dir: THREE.Vector3} | null = null;
 const doors: DoorState[] = [], keys: Record<string, boolean> = {};
 const furnCache = new Map<string, {sig: string; obj: THREE.Group}>();
 
@@ -79,7 +81,7 @@ function init(){
   // three r160 OrbitControls는 목표점을 매번 다시 정규화하면서 미세한 오차로 'change'를 끝없이 보낸다.
   // 그래서 실제로 카메라가 움직였을 때만 다시 그리게 한다
   orbit.addEventListener('change', () => { if (camMoved()) invalidate(); });
-  orbit.addEventListener('start', () => { fly = null; });
+  orbit.addEventListener('start', () => { fly = null; sway = null; emitBus('tourStop', true); });
   walkCtl = new PointerLockControls(camera, document.body);
   walkCtl.addEventListener('change', invalidate);
   walkCtl.addEventListener('lock', () => { $('#walkOverlay').style.display = 'none'; $('#cross').style.display = 'block'; syncHint3d(); });
@@ -717,6 +719,12 @@ function loop(){
   let busy = false; why = '';
   if (anim){ const x = clamp01((now - anim.t0)/anim.dur); anim.fn(x); busy = true; why = 'anim'; if (x >= 1){ const r = anim.res; anim = null; r(); } }
   else if (fly){ const x = clamp01((now - fly.t0)/fly.dur), e = ease(x); setFov(fly.f0 + (fly.f1 - fly.f0)*e); camTween(fly.A, fly.B, e); busy = true; why = 'fly'; if (x >= 1) fly = null; }
+  else if (sway){
+    const x = clamp01((now - sway.t0)/sway.dur), yaw = Math.sin(x*Math.PI*2)*.42*Math.sin(x*Math.PI);
+    const d = sway.dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+    orbit.target.copy(sway.eye).addScaledVector(d, .12); camera.position.copy(sway.eye); camera.lookAt(orbit.target);
+    busy = true; why = 'sway'; if (x >= 1) sway = null;
+  }
   else if (opt.mode === 'orbit'){ orbit.update(); if (camMoved()){ busy = true; why = 'orbit'; } }
   else { stepWalk(dt); busy = walkCtl.isLocked || touchWalk; why = 'walk'; }
   for (const d of doors){
@@ -742,6 +750,8 @@ export function createView3D(){
     sync: () => sync(),
     flyToRoomView: (id: string) => { if (active && !anim) flyToRoomView(id); },
     flyOverview: () => { if (active && !anim) flyOverview(); },
+    lookAround: (ms: number) => { if (!active || anim || !roomView) return; const dir = new THREE.Vector3().subVectors(orbit.target, camera.position).normalize(); sway = {t0: performance.now(), dur: ms, eye: camera.position.clone(), dir}; kick(); },
+    stopLook: () => { sway = null; },
     setMode: (m: 'orbit' | 'walk') => { if (active) setMode(m, false); },
     walking: () => active && opt.mode === 'walk',
     // 성능 측정용: 그림 호출 수·삼각형 수·지금까지 그린 횟수

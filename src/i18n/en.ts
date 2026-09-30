@@ -79,6 +79,12 @@ const en: Record<Key, string> = {
   'room.dress': 'Dressing Room',
   'room.utility': 'Utility Room',
   'room.balcony': 'Balcony',
+  'tour.start': 'Tour',
+  'tour.stop': 'End tour',
+  'tour.step': '{i} / {n}',
+  'tour.floor': '{mat} floor',
+  'tour.prev': 'Previous space',
+  'tour.next': 'Next space',
   'tabs.all': 'All',
 
   'mat.gangmaru': 'Engineered Wood',

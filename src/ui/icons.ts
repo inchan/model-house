@@ -3,7 +3,7 @@ import {
   createElement, Undo2, Redo2, ZoomIn, ZoomOut, Scan, Maximize, Minimize, Trash, Eraser, RotateCcw, RotateCw, Copy, Check,
   Languages, ChevronDown, ChevronRight, MousePointer2, Ruler, SlidersHorizontal, Box, Map, Footprints, Ellipsis, X, Sparkles,
   Sofa, Palette, Layers, Sun, Moon, Grid3x3, Receipt, Download, Upload, Image, Printer, Wind, Scissors, ArrowRight, Info,
-  RefreshCw, Plus, Minus, House, Cuboid, PaintBucket, Eye, PencilRuler, BrickWall, DoorOpen, AppWindow, Columns2, RectangleHorizontal, Move, Tag,
+  RefreshCw, Plus, Minus, House, Cuboid, PaintBucket, Eye, PencilRuler, BrickWall, DoorOpen, AppWindow, Columns2, RectangleHorizontal, Move, Tag, ArrowLeft,
 } from 'lucide';
 
 const ICONS = {
@@ -14,7 +14,7 @@ const ICONS = {
   layers: Layers, sun: Sun, moon: Moon, grid: Grid3x3, receipt: Receipt, download: Download, upload: Upload, image: Image,
   print: Printer, ac: Wind, cut: Scissors, arrowRight: ArrowRight, info: Info, reset: RefreshCw, plus: Plus, minus: Minus,
   home: House, cube: Cuboid, paint: PaintBucket, eye: Eye, edit: PencilRuler, wall: BrickWall, door: DoorOpen, window: AppWindow,
-  slide: Columns2, gap: RectangleHorizontal, move: Move, tag: Tag,
+  slide: Columns2, gap: RectangleHorizontal, move: Move, tag: Tag, arrowLeft: ArrowLeft,
 };
 export type IconName = keyof typeof ICONS;
 

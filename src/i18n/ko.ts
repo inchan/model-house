@@ -83,6 +83,12 @@ const ko = {
   'room.dress': '드레스룸',
   'room.utility': '다용도실',
   'room.balcony': '발코니',
+  'tour.start': '투어',
+  'tour.stop': '투어 끝내기',
+  'tour.step': '{i} / {n}',
+  'tour.floor': '바닥 {mat}',
+  'tour.prev': '이전 공간',
+  'tour.next': '다음 공간',
   'tabs.all': '전체',
 
   // 바닥재

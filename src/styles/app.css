@@ -127,6 +127,26 @@ main.animating #hint3d{opacity:0}
 #fab .name{padding:0 8px 0 6px;font-weight:600;max-width:10em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #fab .sep{width:1px;align-self:stretch;margin:4px 2px;background:var(--line)}
 
+/* 모델하우스 투어 */
+#roomTabs .tour-btn{display:inline-flex;align-items:center;gap:6px;background:var(--green-50);color:var(--green);font-weight:600}
+#roomTabs .tour-btn svg{width:16px;height:16px}
+#roomTabs .tour-btn.on{background:var(--ink);color:#fff}
+#tourCard{position:absolute;left:50%;bottom:78px;transform:translateX(-50%);z-index:6;width:min(420px,calc(100% - 32px));background:rgba(255,253,248,.97);
+  border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-2);padding:14px 16px 12px;animation:fadeIn .25s ease}
+#tourCard[hidden]{display:none}
+#tourCard .tc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+#tourCard .tc-step{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+#tourCard .tc-dots{display:flex;gap:4px}
+#tourCard .tc-dots i{width:6px;height:6px;border-radius:50%;background:var(--line-strong)}
+#tourCard .tc-dots i.done{background:var(--green-100)}
+#tourCard .tc-dots i.on{background:var(--green);width:16px;border-radius:4px}
+#tourCard b{font-size:20px;letter-spacing:-.03em}
+#tourCard p{margin:2px 0 8px;color:var(--ink-2);font-size:13px}
+#tourCard .tc-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+#tourCard .tc-tags span{font-size:12px;padding:3px 9px;border-radius:20px;background:var(--green-50);color:var(--green)}
+#tourCard .tc-acts{display:flex;justify-content:space-between;gap:6px;border-top:1px solid var(--line);padding-top:8px}
+body.touring #fab,body.touring #hint3d,body.touring #tools3d{opacity:0;pointer-events:none}
+
 /* 3D 방 이름 */
 .rlabel{font-size:12px;font-weight:600;color:var(--ink);background:rgba(255,253,248,.92);border:1px solid var(--line);border-radius:12px;padding:2px 9px;white-space:nowrap;pointer-events:none}
 .rlabel small{font-weight:400;color:var(--muted);margin-left:4px}
@@ -359,8 +379,16 @@ body.editing #gLabels{opacity:.75}
   .stage-info span:not(:first-of-type),.stage-info i{display:none}
   .cards{grid-template-columns:1fr}
   .ccard{grid-template-columns:1fr}
-  #estimateBar{gap:10px;padding:0 10px}
+  #estimateBar{gap:8px;padding:0 10px}
+  #estimateBar .who{display:none}
+  #estimateBar .total{margin-left:0;text-align:left;margin-right:auto}
   #estimateBar .total b{font-size:17px}
+  #estimateBar .btn.primary span{display:none}
+  .float-tools.right{top:60px;right:8px;left:8px;justify-content:flex-start}
+  .float-tools.right .range input{width:84px}
+  #hint3d{display:none}
+  .stage-info{left:8px;top:8px;padding:6px 10px}
+  #tourCard{bottom:70px}
 }
 @media print{
   body *{visibility:hidden}
