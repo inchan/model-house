@@ -1,0 +1,29 @@
+name: floorplan-poc
+
+on:
+  pull_request:
+    paths:
+      - 'src/floorplan/**'
+      - 'floorplans/**'
+      - 'scripts/floorplan-*.mjs'
+      - 'tests/floorplan*.test.ts'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test -- --run tests/floorplan.test.ts tests/floorplan-evaluate.test.ts
+      - run: npm run build
