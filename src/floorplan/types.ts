@@ -2,11 +2,25 @@ import type { Pt2, RoomKind, WallKind } from '../data/apt/schema';
 
 export type Confidence = number;
 export type SourceKind = 'pdf' | 'image' | 'svg' | 'manual' | 'unknown';
+export type EvidenceKind = 'dimension' | 'scale' | 'inferred' | 'manual';
+
+export interface ObservationEvidence {
+  kind: EvidenceKind;
+  confidence?: Confidence;
+  note?: string;
+}
 
 export interface FloorplanSource {
   kind: SourceKind;
   name?: string;
   page?: number;
+  url?: string;
+}
+
+export interface FloorplanVariant {
+  id: string;
+  label: string;
+  kind: 'base' | 'expanded' | 'option' | 'unknown';
 }
 
 export interface CanonicalOpening {
@@ -19,7 +33,7 @@ export interface CanonicalOpening {
   hinge?: 'start' | 'end';
   sill?: number;
   head?: number;
-  confidence?: Confidence;
+  evidence?: ObservationEvidence;
 }
 
 export interface CanonicalWall {
@@ -28,15 +42,17 @@ export interface CanonicalWall {
   b: Pt2;
   thickness: number;
   kind: WallKind;
-  confidence?: Confidence;
+  evidence?: ObservationEvidence;
 }
 
 export interface CanonicalSpace {
   id: string;
-  kind: RoomKind;
-  label?: string;
+  sourceLabel?: string;
+  // modelKind is optional on purpose: extraction must not force unknown Korean
+  // semantics (pantry, outdoor-unit room, powder room, etc.) into AptType.
+  modelKind?: RoomKind;
   at: Pt2;
-  confidence?: Confidence;
+  evidence?: ObservationEvidence;
 }
 
 export interface CanonicalFloorPlan {
@@ -45,6 +61,7 @@ export interface CanonicalFloorPlan {
   name: string;
   unit: 'mm';
   source?: FloorplanSource;
+  variant?: FloorplanVariant;
   walls: CanonicalWall[];
   openings: CanonicalOpening[];
   spaces: CanonicalSpace[];
