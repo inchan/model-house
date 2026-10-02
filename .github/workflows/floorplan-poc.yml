@@ -1,6 +1,8 @@
 name: floorplan-poc
 
 on:
+  push:
+    branches: ['feat/floorplan-lab-poc']
   pull_request:
     paths:
       - 'src/floorplan/**'
