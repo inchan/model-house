@@ -1,0 +1,19 @@
+{
+  "caseId": "cheonggye-riverview-xi-59a",
+  "status": "semantic-ground-truth",
+  "geometryStatus": "withheld-no-dimension-evidence",
+  "officialEvidence": {
+    "recruitmentNotice": "https://files-scs.pstatic.net/2023/12/01/INoB2DGbV4/20231201_135847_494001.pdf",
+    "housingType": "059.9870A",
+    "shortType": "59A",
+    "exclusiveAreaM2": 59.987,
+    "residentialCommonAreaM2": 20.102,
+    "supplyAreaM2": 79.999
+  },
+  "visualEvidence": {
+    "floorplanImage": "https://blog.kakaocdn.net/dn/brjTqj/btsBfJItqxJ/WlpMB6HHcG7RejCqKJrV6k/img.jpg",
+    "variants": ["기본형", "확장형(별도계약)"],
+    "observedLabels": ["침실1", "침실2", "침실3", "거실", "주방/식당", "욕실", "발코니", "다용도실"]
+  },
+  "groundTruthPolicy": "No millimetre wall coordinates are asserted until a dimensioned or scale-calibratable source is acquired."
+}
