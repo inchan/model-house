@@ -35,7 +35,11 @@ export function compileCanonicalFloorPlan(plan: CanonicalFloorPlan): CustomPlan 
   const custom: CustomPlan = {
     rev: 1,
     walls,
-    rooms: plan.spaces.map(s => ({id: s.id, kind: s.kind, at: [Math.round(s.at[0]), Math.round(s.at[1])]})),
+    // Unknown source semantics are intentionally not guessed. normalizeCustom()
+    // will create geometry rooms; only explicitly mapped semantics are carried in.
+    rooms: plan.spaces.filter(s => s.modelKind).map(s => ({
+      id: s.id, kind: s.modelKind!, at: [Math.round(s.at[0]), Math.round(s.at[1])],
+    })),
     fixtures: [],
   };
   normalizeCustom(custom);
