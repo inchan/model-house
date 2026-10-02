@@ -15,8 +15,8 @@
         "required": ["id","a","b","thickness","kind","evidence"],
         "properties": {
           "id":{"type":"string"},
-          "a":{"type":"array","prefixItems":[{"type":"number"},{"type":"number"}],"minItems":2,"maxItems":2},
-          "b":{"type":"array","prefixItems":[{"type":"number"},{"type":"number"}],"minItems":2,"maxItems":2},
+          "a":{"type":"array","items":{"type":"number"},"minItems":2,"maxItems":2},
+          "b":{"type":"array","items":{"type":"number"},"minItems":2,"maxItems":2},
           "thickness":{"type":"number"},
           "kind":{"enum":["b","e","n","low"]},
           "evidence":{"$ref":"#/$defs/evidence"}
@@ -42,7 +42,7 @@
         "required":["id","sourceLabel","at","evidence"],
         "properties":{
           "id":{"type":"string"},"sourceLabel":{"type":"string"},
-          "at":{"type":"array","prefixItems":[{"type":"number"},{"type":"number"}],"minItems":2,"maxItems":2},
+          "at":{"type":"array","items":{"type":"number"},"minItems":2,"maxItems":2},
           "evidence":{"$ref":"#/$defs/evidence"}
         }
       }
