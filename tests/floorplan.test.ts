@@ -12,7 +12,7 @@ const rectangle = (): CanonicalFloorPlan => ({
     {id: 'w', a: [0, 3000], b: [0, 0], thickness: 200, kind: 'e'},
   ],
   openings: [{id: 'door', kind: 'entry', wallId: 'n', at: 500, width: 900}],
-  spaces: [{id: 'living', kind: 'living', at: [2000, 1500]}],
+  spaces: [{id: 'living', sourceLabel: '거실', modelKind: 'living', at: [2000, 1500]}],
 });
 
 describe('canonical floorplan', () => {
