@@ -1,0 +1,15 @@
+{
+  "caseId": "cheonggye-riverview-xi-59b",
+  "status": "semantic-ground-truth",
+  "geometryStatus": "withheld-no-dimension-evidence",
+  "officialEvidence": {
+    "recruitmentNotice": "https://files-scs.pstatic.net/2023/12/01/INoB2DGbV4/20231201_135847_494001.pdf",
+    "housingType": "059.9020B",
+    "shortType": "59B",
+    "exclusiveAreaM2": 59.902,
+    "residentialCommonAreaM2": 21.614,
+    "supplyAreaM2": 81.516
+  },
+  "observedSemantics": ["안방 드레스룸", "실외기실"],
+  "groundTruthPolicy": "No millimetre wall coordinates are asserted until a dimensioned or scale-calibratable source is acquired."
+}

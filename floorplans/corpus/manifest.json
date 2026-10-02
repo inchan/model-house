@@ -1,0 +1,137 @@
+{
+  "version": 1,
+  "policy": "Source images remain at their original publishers unless redistribution permission is verified.",
+  "selection": "Korean apartment sales with 2024 recruitment notices, plus required Cheonggye Riverview Xi exception.",
+  "cases": [
+    {
+      "id": "cheonggye-riverview-xi-59a",
+      "complex": "청계리버뷰자이",
+      "region": "서울 성동구 용답동",
+      "noticeId": "2023000532",
+      "noticeYear": 2023,
+      "requiredException": true,
+      "type": "59A",
+      "geometryClass": "3bay-flat",
+      "sourcePage": "https://dms791.tistory.com/entry/%EC%B2%AD%EA%B3%84%EB%A6%AC%EB%B2%84%EB%B7%B0%EC%9E%90%EC%9D%B4-%EC%B2%AD%EC%95%BD%EC%9D%BC%EC%A0%95",
+      "status": "source-located"
+    },
+    {
+      "id": "cheonggye-riverview-xi-59b",
+      "complex": "청계리버뷰자이",
+      "region": "서울 성동구 용답동",
+      "noticeId": "2023000532",
+      "noticeYear": 2023,
+      "requiredException": true,
+      "type": "59B",
+      "geometryClass": "2bay-tower",
+      "sourcePage": "https://dms791.tistory.com/entry/%EC%B2%AD%EA%B3%84%EB%A6%AC%EB%B2%84%EB%B7%B0%EC%9E%90%EC%9D%B4-%EC%B2%AD%EC%95%BD%EC%9D%BC%EC%A0%95",
+      "status": "source-located"
+    },
+    {
+      "id": "cheonggye-riverview-xi-73",
+      "complex": "청계리버뷰자이",
+      "region": "서울 성동구 용답동",
+      "noticeId": "2023000532",
+      "noticeYear": 2023,
+      "requiredException": true,
+      "type": "73",
+      "geometryClass": "4bay-flat-open-balcony",
+      "sourcePage": "https://dms791.tistory.com/entry/%EC%B2%AD%EA%B3%84%EB%A6%AC%EB%B2%84%EB%B7%B0%EC%9E%90%EC%9D%B4-%EC%B2%AD%EC%95%BD%EC%9D%BC%EC%A0%95",
+      "status": "source-located"
+    },
+    {
+      "id": "geomdan-atera-xi-59a",
+      "complex": "검단 아테라자이",
+      "region": "인천 서구",
+      "noticeId": "2024000354",
+      "noticeYear": 2024,
+      "type": "59A",
+      "geometryClass": "base-and-expanded",
+      "sourcePage": "https://anim.tistory.com/230",
+      "status": "source-located"
+    },
+    {
+      "id": "geomdan-atera-xi-59b",
+      "complex": "검단 아테라자이",
+      "region": "인천 서구",
+      "noticeId": "2024000354",
+      "noticeYear": 2024,
+      "type": "59B",
+      "geometryClass": "alternate-59",
+      "sourcePage": "https://anim.tistory.com/230",
+      "status": "source-located"
+    },
+    {
+      "id": "bundang-kumho-greenpark-74",
+      "complex": "분당 금호어울림 그린파크",
+      "region": "경기 성남시 분당구",
+      "noticeYear": 2024,
+      "type": "74",
+      "geometryClass": "tower",
+      "sourcePage": "https://hyoribogo-jeoribogo.tistory.com/entry/%EB%B6%84%EB%8B%B9-%EC%95%BC%ED%83%91-%EA%B8%88%ED%98%B8%EC%96%B4%EC%9A%B8%EB%A6%BC-%EA%B7%B8%EB%A6%B0%ED%8C%8C%ED%81%AC-%EB%B6%84%EC%96%91%EA%B0%80-%EC%83%81%ED%95%9C%EC%A0%9C-%EC%9D%BC%EC%A0%95-%EC%B2%AD%EC%95%BD%EC%A1%B0%EA%B1%B4",
+      "status": "source-located"
+    },
+    {
+      "id": "bundang-kumho-greenpark-84a",
+      "complex": "분당 금호어울림 그린파크",
+      "region": "경기 성남시 분당구",
+      "noticeYear": 2024,
+      "type": "84A",
+      "geometryClass": "4bay-flat-alpha",
+      "sourcePage": "https://hyoribogo-jeoribogo.tistory.com/entry/%EB%B6%84%EB%8B%B9-%EC%95%BC%ED%83%91-%EA%B8%88%ED%98%B8%EC%96%B4%EC%9A%B8%EB%A6%BC-%EA%B7%B8%EB%A6%B0%ED%8C%8C%ED%81%AC-%EB%B6%84%EC%96%91%EA%B0%80-%EC%83%81%ED%95%9C%EC%A0%9C-%EC%9D%BC%EC%A0%95-%EC%B2%AD%EC%95%BD%EC%A1%B0%EA%B1%B4",
+      "status": "source-located"
+    },
+    {
+      "id": "pyeongchon-urbanvalley-84a",
+      "complex": "e편한세상 평촌 어반밸리",
+      "region": "경기 안양시",
+      "noticeYear": 2024,
+      "type": "84A",
+      "geometryClass": "base-expanded-comparison",
+      "sourcePage": "https://whitesiroblancweiss.tistory.com/116",
+      "status": "source-located"
+    },
+    {
+      "id": "mapo-xi-hillstate-rachels-84d",
+      "complex": "마포자이힐스테이트 라첼스",
+      "region": "서울 마포구 공덕동",
+      "noticeYear": 2024,
+      "type": "84D",
+      "geometryClass": "urban-redevelopment",
+      "sourcePage": "https://franklinlife.tistory.com/3462",
+      "status": "source-located"
+    },
+    {
+      "id": "dh-bangbae-101a",
+      "complex": "디에이치 방배",
+      "region": "서울 서초구 방배동",
+      "noticeId": "2024000412",
+      "noticeYear": 2024,
+      "type": "101A",
+      "geometryClass": "large-unit",
+      "sourcePage": "https://anim.tistory.com/235",
+      "status": "source-located"
+    },
+    {
+      "id": "cheongdam-le-el-84c",
+      "complex": "청담 르엘",
+      "region": "서울 강남구 청담동",
+      "noticeId": "2024000513",
+      "noticeYear": 2024,
+      "type": "84C",
+      "geometryClass": "high-end-redevelopment",
+      "sourcePage": "https://www.lottecon.co.kr/Medias/notice_view?noticeSeq=1314&noticetypecd=003",
+      "status": "source-located"
+    },
+    {
+      "id": "yongin-prugio-onecluster-84b",
+      "complex": "용인 푸르지오 원클러스터 1단지",
+      "region": "경기 용인시",
+      "noticeYear": 2024,
+      "type": "84B",
+      "geometryClass": "new-town-84",
+      "sourcePage": "https://anim.tistory.com/229",
+      "status": "source-located"
+    }
+  ]
+}

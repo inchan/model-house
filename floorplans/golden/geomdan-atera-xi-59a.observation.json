@@ -1,0 +1,15 @@
+{
+  "caseId": "geomdan-atera-xi-59a",
+  "status": "semantic-ground-truth",
+  "geometryStatus": "withheld-no-dimension-evidence",
+  "officialEvidence": {
+    "recruitmentNoticeId": "2024000354",
+    "shortType": "59A",
+    "salesYear": 2024
+  },
+  "visualEvidence": {
+    "variants": ["기본/비확장 계열", "발코니 확장 계열"],
+    "layoutClass": "4bay-flat"
+  },
+  "groundTruthPolicy": "Variant identity is ground truth; millimetre geometry remains withheld until source dimensions or scale evidence are available."
+}
