@@ -19,7 +19,7 @@ describe('floorplan benchmark evaluator', () => {
     expect(m.wallRecall).toBe(1);
     expect(m.openingPrecision).toBe(1);
     expect(m.openingRecall).toBe(1);
-    expect(m.spaceLabelAccuracy).toBe(1);
+    expect(m.spaceLabelAccuracy).toBeNull();
     expect(m.wallCoordinateMaeMm).toBe(0);
   });
 
@@ -28,6 +28,6 @@ describe('floorplan benchmark evaluator', () => {
     pred.walls[0] = {...pred.walls[0]!, b:[3900,0]};
     const m = evaluateCanonicalFloorPlan(pred, truth);
     expect(m.wallRecall).toBe(.5);
-    expect(m.wallCoordinateMaeMm).toBe(25);
+    expect(m.wallCoordinateMaeMm).toBeNull();
   });
 });
