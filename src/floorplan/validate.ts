@@ -10,6 +10,7 @@ const checkEvidence = (e: ObservationEvidence | undefined, entityId: string, iss
 export function validateCanonicalFloorPlan(plan: CanonicalFloorPlan): FloorplanValidation {
   const issues: FloorplanIssue[] = [];
   const wallIds = new Set<string>();
+  const wallsById = new Map(plan.walls.map(w => [w.id, w]));
 
   if (plan.version !== 1) issues.push({severity: 'error', code: 'unsupported-version', message: 'Only canonical floorplan version 1 is supported.'});
   if (plan.unit !== 'mm') issues.push({severity: 'error', code: 'unsupported-unit', message: 'Canonical floorplans must use millimetres.'});
@@ -28,7 +29,7 @@ export function validateCanonicalFloorPlan(plan: CanonicalFloorPlan): FloorplanV
   for (const opening of plan.openings) {
     if (openingIds.has(opening.id)) issues.push({severity: 'error', code: 'duplicate-opening-id', message: 'Opening ids must be unique.', entityId: opening.id});
     openingIds.add(opening.id);
-    const wall = plan.walls.find(w => w.id === opening.wallId);
+    const wall = wallsById.get(opening.wallId);
     if (!wall) {
       issues.push({severity: 'error', code: 'opening-wall-missing', message: 'Opening references an unknown wall.', entityId: opening.id});
       continue;

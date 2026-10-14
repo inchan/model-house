@@ -1,6 +1,5 @@
 import type { OpeningSpec, WallSpec } from '../data/apt/schema';
-import type { CustomPlan } from '../data/apt/custom';
-import { normalizeCustom } from '../data/apt/custom';
+import { normalizeCustom, type CustomPlan } from '../data/apt/custom';
 import type { CanonicalFloorPlan } from './types';
 import { validateCanonicalFloorPlan } from './validate';
 
@@ -16,7 +15,7 @@ export function compileCanonicalFloorPlan(plan: CanonicalFloorPlan): CustomPlan 
     const list = openings.get(o.wallId) ?? [];
     list.push({
       kind: o.kind, at: Math.round(o.at), w: Math.round(o.width),
-      ...(o.side ? {side: o.side} : {}),
+      ...(o.side !== undefined ? {side: o.side} : {}),
       ...(o.hinge ? {hinge: o.hinge} : {}),
       ...(o.sill !== undefined ? {sill: o.sill} : {}),
       ...(o.head !== undefined ? {head: o.head} : {}),
@@ -37,9 +36,9 @@ export function compileCanonicalFloorPlan(plan: CanonicalFloorPlan): CustomPlan 
     walls,
     // Unknown source semantics are intentionally not guessed. normalizeCustom()
     // will create geometry rooms; only explicitly mapped semantics are carried in.
-    rooms: plan.spaces.filter(s => s.modelKind).map(s => ({
-      id: s.id, kind: s.modelKind!, at: [Math.round(s.at[0]), Math.round(s.at[1])],
-    })),
+    rooms: plan.spaces.flatMap(s => s.modelKind ? [{
+      id: s.id, kind: s.modelKind, at: [Math.round(s.at[0]), Math.round(s.at[1])] as [number, number],
+    }] : []),
     fixtures: [],
   };
   normalizeCustom(custom);
